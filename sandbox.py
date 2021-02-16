@@ -1,7 +1,7 @@
 import pickle
 
 thing = pickle.load(open("data/motions/gBR_sBM_cAll_d06_mBR4_ch10.pkl", "rb"))
-thing = pickle.load(open("data/motions/gBR_sBM_cAll_d06_mBR2_ch02.pkl", "rb"))
+thing = pickle.load(open("data/motions/gHO_sBM_cAll_d19_mHO3_ch08.pkl", "rb"))
 
 thing['smpl_poses'].shape
 thing['smpl_trans'].shape
@@ -25,6 +25,7 @@ audio_feats = np.load("data/features/gWA_sBM_c03_d26_mWA1_ch08.mp3_mel_100.npy")
 audio_feats = np.load("data/features/gWA_sBM_c01_d26_mWA1_ch08.mp3_mel_100.npy")
 audio_feats = np.load("data/dev_audio/gBR_sBM_c01_d06_mBR4_ch10.mp3_mel_100.npy")
 audio_feats = np.load("data/dev_audio/gBR_sBM_c01_d06_mBR2_ch02.mp3_mel_100.npy")
+audio_feats = np.load("data/dev_audio/gHO_sBM_c01_d19_mHO3_ch08.mp3_multi_mel_80.npy_ddc_hidden.npy")
 
 audio_feats.shape
 

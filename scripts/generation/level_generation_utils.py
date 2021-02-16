@@ -3,13 +3,12 @@ import json
 generated_folder = "generated/"
 logo_path = "logo.jpg"
 import librosa
-from scripts.feature_extraction.feature_extraction import extract_features_hybrid, extract_features_mel,extract_features_hybrid_beat_synced, extract_features_multi_mel
+from scripts.feature_extraction.feature_extraction import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
 
 def extract_features(song_path, args, opt):
     y_wav, sr = librosa.load(song_path, sr=opt.sampling_rate)
 
     # useful quantities
-    bpm = args.bpm
     feature_name = opt.feature_name
     feature_size = opt.feature_size
     sampling_rate = opt.sampling_rate
@@ -21,33 +20,15 @@ def extract_features(song_path, args, opt):
         using_bpm_time_division = True
 
     sr = sampling_rate
-    beat_duration = 60/bpm #beat duration in seconds
-    beat_duration_samples = int(60*sr/bpm) #beat duration in samples
-    if using_bpm_time_division:
-        # duration of one time step in samples:
-        hop = int(beat_duration_samples * 1/beat_subdivision)
-        step_size = beat_duration/beat_subdivision # in seconds
-    else:
-        beat_subdivision = 1/(step_size*bpm/60)
-        hop = int(step_size*sr)
+    hop = int(step_size*sr)
 
     #get feature
     if feature_name == "chroma":
-        if using_bpm_time_division:
-            state_times = np.arange(0,y_wav.shape[0]/sr,step=step_size)
-            features = extract_features_hybrid_beat_synced(y_wav,sr,state_times,bpm,beat_discretization=1/beat_subdivision)
-        else:
-            features = extract_features_hybrid(y_wav,sr,hop)
+        features = extract_features_hybrid(y_wav,sr,hop)
     elif feature_name == "mel":
-        if using_bpm_time_division:
-            raise NotImplementedError("Mel features with beat synced times not implemented, but trivial TODO")
-        else:
-            features = extract_features_mel(y_wav,sr,hop,mel_dim=feature_size)
+        features = extract_features_mel(y_wav,sr,hop,mel_dim=feature_size)
     elif feature_name == "multi_mel":
-        if using_bpm_time_division:
-            raise NotImplementedError("Mel features with beat synced times not implemented, but trivial TODO")
-        else:
-            features = extract_features_multi_mel(y_wav, sr=sampling_rate, hop=hop, nffts=[1024,2048,4096], mel_dim=feature_size)
+        features = extract_features_multi_mel(y_wav, sr=sampling_rate, hop=hop, nffts=[1024,2048,4096], mel_dim=feature_size)
 
     return hop, features
 
