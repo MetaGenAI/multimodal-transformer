@@ -32,6 +32,15 @@ args = parser.parse_args()
 globals().update(vars(args))
 data_path = Path(data_path)
 
+from scipy.spatial.transform import Rotation as R
+
+def get_rot_matrices(joint_traj):
+    return np.stack([np.concatenate([R.from_euler('xyz',euler_angles).as_matrix().flatten() for euler_angles in np.array(joint_angles).reshape(-1,3)]) for joint_angles in joint_traj])
+
+def get_features(motion_data):
+    joint_angle_feats = get_rot_matrices((motion_data['smpl_poses']))
+    return np.concatenate([joint_angle_feats,motion_data['smpl_trans']],1)
+
 ## distributing tasks accross nodes ##
 from mpi4py import MPI
 comm = MPI.COMM_WORLD
@@ -40,8 +49,7 @@ size = comm.Get_size()
 print(rank)
 print("creating {} of size {}".format(feature_name, feature_size))
 
-#assuming egg sound format, as used in new BeatSaber format
-candidate_audio_files = sorted(data_path.glob('**/*.mp3'), key=lambda path: path.parent.__str__())
+candidate_motion_files = sorted(data_path.glob('**/*.pkl'), key=lambda path: path.parent.__str__())
 num_tasks = len(candidate_audio_files)
 num_tasks_per_job = num_tasks//size
 tasks = list(range(rank*num_tasks_per_job,(rank+1)*num_tasks_per_job))
@@ -49,26 +57,11 @@ if rank < num_tasks%size:
     tasks.append(size*num_tasks_per_job+rank)
 
 for i in tasks:
-    path = candidate_audio_files[i]
-    song_file_path = path.__str__()
-    # feature files are going to be saved as numpy files
-    features_file = song_file_path+"_"+feature_name+"_"+str(feature_size)+".npy"
-
+    path = candidate_motion_files[i]
+    motion_file_path = path.__str__()
+    features_file = motion_file_path+"_"+"joint_angles_mats"+".npy"
     if replace_existing or not os.path.isfile(features_file):
-        print("creating feature file",i)
-
-        # get song
-        y_wav, sr = librosa.load(song_file_path, sr=sampling_rate)
-
-        sr = sampling_rate
-        hop = int(sr * step_size)
-
-        #get feature
-        if feature_name == "chroma":
-            features = extract_features_hybrid(y_wav,sr,hop)
-        elif feature_name == "mel":
-            features = extract_features_mel(y_wav,sr,hop,mel_dim=feature_size)
-        elif feature_name == "multi_mel":
-            features = extract_features_multi_mel(y_wav, sr=sampling_rate, hop=hop, nffts=[1024,2048,4096], mel_dim=feature_size)
-
+        motion_data = pickle.load(open(path,"rb"))
+        features = get_features(motion_data)
+        print(features.shape)
         np.save(features_file,features)
