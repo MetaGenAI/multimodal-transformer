@@ -1,0 +1,40 @@
+#!/bin/bash
+
+# these are the settings for the computers I'm using at the moment
+
+#root=../../generation
+root=../../training
+exp=$2
+iter=$3
+
+if [ $1 = bria ] #briareos
+then
+    port=16384
+    url=0.tcp.ngrok.io
+    path=/home/guillefix/code/
+elif [ $1 = lbria ] #local briareos
+then
+    port=22
+    url=192.168.1.103
+    path=~/code/
+elif [ $1 = hydra ] #hydra
+then
+    port=22
+    url=$hydra
+    path=/users/guillefix/
+elif [ $1 = gcloud ] #google cloud
+then
+    instance=$2
+    exp=$3
+    iter=$4
+    mkdir ${root}/${exp}
+    #echo $instance
+    #gcloud compute scp --project skillful-eon-241416 --zone us-central1-a --recurse ${instance}:~/code/beatsaber/base/${exp}/opt.json ${root}/${exp}
+    #gcloud compute scp --project skillful-eon-241416 --zone us-central1-a --recurse ${instance}:~/code/beatsaber/base/${exp}/iter_${iter}_net_.pth ${root}/${exp}
+    gcloud compute scp --project skillful-eon-241416 --zone us-central1-a --recurse ${instance}:~/code/beatsaber/scripts/training/${exp}/opt.json ${root}/${exp}
+    gcloud compute scp --project skillful-eon-241416 --zone us-central1-a --recurse ${instance}:~/code/beatsaber/scripts/training/${exp}/iter_${iter}_net_.pth ${root}/${exp}
+    exit 0
+fi
+mkdir ${root}/${exp}
+scp -P $port ${url}:${path}beatsaber/base/${exp}/opt.json ${root}/${exp}
+scp -P $port ${url}:${path}beatsaber/base/${exp}/iter_${iter}_net_.pth ${root}/${exp}
