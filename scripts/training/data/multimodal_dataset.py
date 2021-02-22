@@ -44,43 +44,88 @@ class MultimodalDataset(BaseDataset):
         input_seq_len = self.opt.input_seq_len
         output_seq_len = self.opt.output_seq_len
         min_length = max(input_seq_len, self.opt.output_time_offset + output_seq_len) - min(0,self.opt.output_time_offset)
+        print(min_length)
 
         #Get the list of files containing features (in numpy format for now), and populate the dictionaries of input and output features (separated by modality)
         for base_filename in temp_base_filenames:
             file_too_short = False
-            for mod in input_mods:
+            for i, mod in enumerate(input_mods):
                 feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
+                # print(feature_file)
                 try:
                     features = np.load(feature_file)
-                    if features.shape[-1] < min_length:
-                        print("Smol sequence "+base_filename+"."+mod+"; ignoring..")
-                        file_too_short = False
-                        continue
+                    length = features.shape[0]
+                    # print(features.shape)
+                    # print(length)
+                    if i == 0:
+                        length_0 = length
+                    else:
+                        assert length == length_0
+                    if length < min_length:
+                        # print("Smol sequence "+base_filename+"."+mod+"; ignoring..")
+                        file_too_short = True
+                        break
                 except FileNotFoundError:
                     raise Exception("An unprocessed input feature found "+base_filename+"."+mod+"; need to run preprocessing script before starting to train with them")
 
             if file_too_short: continue
 
-            for mod in output_mods:
+            for i, mod in enumerate(output_mods):
                 feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
                 try:
                     features = np.load(feature_file)
-                    if features.shape[-1] < min_length:
-                        print("Smol sequence "+base_filename+"."+mod+"; ignoring..")
-                        file_too_short = False
-                        continue
+                    length = features.shape[0]
+                    if i == 0:
+                        length_0 = length
+                    else:
+                        assert length == length_0
+                    if length < min_length:
+                        # print("Smol sequence "+base_filename+"."+mod+"; ignoring..")
+                        file_too_short = True
+                        break
                 except FileNotFoundError:
                     raise Exception("An unprocessed output feature found "+base_filename+"."+mod+"; need to run preprocessing script before starting to train with them")
 
             if file_too_short: continue
 
             for mod in input_mods:
+                feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
                 self.input_features[mod][base_filename] = feature_file
+            # shortest_length = 99999999999
+            # for mod in input_mods:
+            #     length = np.load(self.input_features[mod][base_filename]).shape[0]
+            #     if length < shortest_length:
+            #         shortest_length = length
+            # for mod in input_mods:
+            #     np.save(self.input_features[mod][base_filename],np.load(self.input_features[mod][base_filename])[:shortest_length])
+            # for i, mod in enumerate(input_mods):
+            #     length = np.load(self.input_features[mod][base_filename]).shape[0]
+            #     if i == 0:
+            #         length_0 = length
+            #     else:
+            #         assert length == length_0
+
             for mod in output_mods:
+                feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
                 self.output_features[mod][base_filename] = feature_file
+            # shortest_length = 99999999999
+            # for mod in output_mods:
+            #     length = np.load(self.output_features[mod][base_filename]).shape[0]
+            #     if length < shortest_length:
+            #         shortest_length = length
+            # for mod in output_mods:
+            #     if mod not in input_mods:
+            #         np.save(self.output_features[mod][base_filename],np.load(self.output_features[mod][base_filename])[:shortest_length])
+            # for i, mod in enumerate(output_mods):
+            #     length = np.load(self.output_features[mod][base_filename]).shape[0]
+            #     if i == 0:
+            #         length_0 = length
+            #     else:
+            #         assert length == length_0
             self.base_filenames.append(base_filename)
 
-        assert self.base_filenames, "List of files for training cannot be empty"
+        print("sequences added: "+str(len(self.base_filenames)))
+        assert len(self.base_filenames)>0, "List of files for training cannot be empty"
         for mod in input_mods:
             assert len(self.input_features[mod].values()) == len(self.base_filenames)
         for mod in output_mods:
@@ -129,7 +174,7 @@ class MultimodalDataset(BaseDataset):
             else:
                 input_feature = np.load(self.input_features[mod][base_filename])
                 input_mod_sizes.append(input_feature.shape[0])
-                input_features = np.stack([input_features,input_feature])
+                input_features = np.concatenate([input_features,input_feature], 1)
 
         for i, mod in enumerate(output_mods):
             if i==0:
@@ -138,22 +183,26 @@ class MultimodalDataset(BaseDataset):
             else:
                 output_feature = np.load(self.output_features[mod][base_filename])
                 output_mod_sizes.append(output_feature.shape[0])
-                output_features = np.stack([output_features,output_feature])
+                output_features = np.concatenate([output_features,output_feature], 1)
 
-        x = input_features
-        y = output_features
+        x = input_features.transpose(1,0)
+        y = output_features.transpose(1,0)
+        # print(x.shape)
 
         # we pad the song features with zeros to imitate during training what happens during generation
         if len(x.shape) == 2: # one feature dimension in y
             x = np.concatenate((np.zeros(( x.shape[0],max(0,time_offset) )),x),1)
+            y = np.concatenate((np.zeros(( y.shape[0],max(0,time_offset) )),y),1)
             # we also pad at the end to allow generation to be of the same length of sequence, by padding an amount corresponding to time_offset
-            x = np.concatenate((x,np.zeros(( x.shape[0],max(0,input_length-(time_offset+output_length)) ))),1)
+            x = np.concatenate((x,np.zeros(( x.shape[0],max(0,input_length-(time_offset+output_length-1)) ))),1)
+            y = np.concatenate((y,np.zeros(( y.shape[0],max(0,input_length-(time_offset+output_length-1)) ))),1)
 
         ## WINDOWS ##
         # sample indices at which we will get opt.num_windows windows of the sequence to feed as inputs
             # TODO: make this deterministic, and determined by `item`, so that one epoch really corresponds to going through all the data..
         sequence_length = x.shape[-1]
         indices = np.random.choice(range(0,sequence_length-max(input_length,time_offset+output_length)),size=self.opt.num_windows,replace=True)
+        # print(indices)
 
         ## CONSTRUCT TENSOR OF INPUT FEATURES ##
         input_windows = [x[:,i:i+input_length] for i in indices]
@@ -164,6 +213,8 @@ class MultimodalDataset(BaseDataset):
         output_windows = [y[:,i+time_offset:i+time_offset+output_length] for i in indices]
         output_windows = torch.tensor(output_windows)
         # output_windows = (output_windows - output_windows.mean())/torch.abs(output_windows).max()
+
+        # print(input_windows.shape)
 
         return {'input': input_windows.float(), 'target': output_windows.float(), 'feature_sizes': (input_mod_sizes, output_mod_sizes)}
 

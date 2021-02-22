@@ -51,12 +51,13 @@ print("STAGE TWO!")
 ''' LOAD MODEL, OPTS, AND WEIGHTS (for stage1 if two_stage) '''
 
 #loading opt object from experiment, and constructing Struct object after adding some things
-opt = json.loads(open("../training/"+experiment_name+"opt.json","r").read())
+opt = json.loads(open("scripts/training/"+experiment_name+"opt.json","r").read())
 # extra things Beam search wants
 if args.cuda:
     opt["gpu_ids"] = [0]
 else:
     opt["gpu_ids"] = []
+opt["checkpoints_dir"] = "scripts/training"
 opt["load_iter"] = int(checkpoint)
 if args.cuda:
     opt["cuda"] = True
@@ -77,22 +78,21 @@ model = create_model(opt)
 model.setup()
 checkpoint = "iter_"+checkpoint
 model.load_networks(checkpoint)
-unique_states = pickle.load(open("../../data/statespace/sorted_states.pkl","rb"))
 
 ''' GET SONG FEATURES for stage two '''
 #%%
 
-hop, features = extract_features(song_path, args, opt)
+sound_features = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.mp3_multi_mel_80.npy_ddc_hidden.npy")
+motion_features = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.pkl_joint_angles_mats.npy")
 
-#%%
-print("Generating state sequence...")
-state_times, generated_sequence = model.generate(features, json_file, args.bpm, unique_states, temperature=temperature, use_beam_search=args.use_beam_search, generate_full_song=args.generate_full_song)
-# state_times is the times of the nonemtpy states, in bpm units
+# motion_features = np.zeros((features.shape[0],219))
 
-#%%
-from scripts.data_processing.state_space_functions import stage_two_states_to_json_notes
-times_real = [t*60/args.bpm for t in state_times]
-notes2 = stage_two_states_to_json_notes(generated_sequence, state_times, args.bpm, hop, opt.sampling_rate, state_rank=unique_states)
-# print("Bad notes:", np.unique(np.diff(times_real)[np.diff(times_real)<=constants.HUMAN_DELTA], return_counts=True))
+features = np.concatenate([motion_features,sound_features],1)
+features = features.transpose(1,0)
+# print(features.shape)
 
-make_level_from_notes(notes2, args.bpm, song_name, args, upload_to_dropbox=args.open_in_browser, open_in_browser=args.open_in_browser)
+predicted_modes = model.generate(features, 1.0, mod_sizes = {"pkl_joint_angles_mats":219, "mp3_multi_mel_80.npy_ddc_hidden":512}, predicted_mods = ["pkl_joint_angles_mats"], use_beam_search=False)
+
+print(predicted_modes)
+
+np.save("gWA_sFM_cAll_d26_mWA1_ch09.pkl_joint_angles_mats.generated.test.npz",predicted_modes.cpu().numpy())

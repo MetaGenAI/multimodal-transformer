@@ -133,24 +133,24 @@ class DDCModel(BaseModel):
         if self.opt.cuda:
             with torch.no_grad():
                 self.net.module.eval()
-                return F.softmax(self.net.module.forward(input),2)
+                return F.softmax(self.net.module.forward(input)[0],2)
         else:
             with torch.no_grad():
                 self.net.eval()
-                return F.softmax(self.net.forward(input),2)
+                return F.softmax(self.net.forward(input)[0],2)
 
     def generate_features(self,y):
         input = self.prepare_input(y)
         if self.opt.cuda:
             with torch.no_grad():
                 self.net.module.eval()
-                logits = F.softmax(self.net.module.forward(input),2)
-                return self.net.module.hidden_states, logits
+                logits, h = self.net.module.forward(input)
+                return h, F.softmax(logits,2)
         else:
             with torch.no_grad():
                 self.net.eval()
-                logits = F.softmax(self.net.forward(input),2)
-                return self.net.hidden_states, logits
+                logits, h = self.net.forward(input)
+                return h, F.softmax(logits,2)
 
 
 class DDCNet(nn.Module):
@@ -165,7 +165,6 @@ class DDCNet(nn.Module):
         self.lstm = nn.LSTM(input_size=20*7*8, hidden_size=opt.hidden_dim, num_layers=2, batch_first=True)  # Define the LSTM
         self.hidden_to_state = nn.Linear(opt.hidden_dim,
                                          opt.num_classes)
-        self.hidden_states = None
 
     def forward(self, x):
         # batch/window x time x temporal_context x frequency_features x mel_window_sizes
@@ -180,7 +179,6 @@ class DDCNet(nn.Module):
         # x = F.relu(self.fc1(x))
         # x = F.relu(self.fc2(x))
         lstm_out, _ = self.lstm(x)
-        self.hidden_states = lstm_out
         logits = self.hidden_to_state(lstm_out)
         # print(logits.shape)
-        return logits
+        return logits, lstm_out
