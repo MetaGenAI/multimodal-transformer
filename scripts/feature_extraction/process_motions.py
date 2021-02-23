@@ -100,6 +100,22 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 print(rank)
 
+from scipy.signal import resample
+from scipy.interpolate import interp1d
+
+def ResampleLinear1D(original, targetLen):
+    index_arr = np.linspace(0, len(original)-1, num=targetLen, dtype=np.float)
+    index_floor = np.array(index_arr, dtype=np.int) #Round down
+    index_ceil = index_floor + 1
+    index_rem = index_arr - index_floor #Remain
+
+    val1 = original[index_floor]
+    val2 = original[index_ceil % len(original)]
+    interp = val1 * np.expand_dims(1.0-index_rem,1) + val2 * np.expand_dims(index_rem,1)
+    assert(len(interp) == targetLen)
+    return interp
+
+
 candidate_motion_files = sorted(data_path.glob('**/*.pkl'), key=lambda path: path.parent.__str__())
 num_tasks = len(candidate_motion_files)
 num_tasks_per_job = num_tasks//size
@@ -114,5 +130,7 @@ for i in tasks:
     if replace_existing or not os.path.isfile(features_file):
         motion_data = pickle.load(open(path,"rb"))
         features = get_features(motion_data)
+        print(features.shape)
+        features = ResampleLinear1D(features,features.shape[0]*2)
         print(features.shape)
         np.save(features_file,features)

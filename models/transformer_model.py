@@ -161,7 +161,7 @@ class TransformerModel(BaseModel):
         # -> 0 time dimension, 1 batch dimenison, 2 channel dimension
         x = x.unsqueeze(0).permute(2,0,1).to(self.device)
 
-        input_seq = x[:opt.input_seq_len]
+        input_seq = x[:opt.input_seq_len].clone()
         # print(input_seq.shape)
 
         output_seq = None
@@ -178,6 +178,7 @@ class TransformerModel(BaseModel):
             out_mod_indices[mod] = i
             dmod = mod_sizes[mod]
             i += dmod
+
         for t in range(sequence_length-input_length-1):
         # for t in range(sequence_length):
             # time.sleep(1)
@@ -187,20 +188,23 @@ class TransformerModel(BaseModel):
                 output_seq = next_prediction
             else:
                 output_seq = torch.cat([output_seq, next_prediction])
+                #output_seq = torch.cat([output_seq, x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,:219]])
             if t < sequence_length-1:
                 for mod in input_mods:
                     dmod = mod_sizes[mod]
                     i = in_mod_indices[mod]
                     if mod in predicted_mods:
                         j = out_mod_indices[mod]
-                        # input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],next_prediction[:,:,j:j+dmod]],0)
+                        print(j)
+                        #input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],next_prediction[:,:,j:j+dmod]],0)
                         input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
+                        print(torch.mean((x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]-next_prediction[:,:,j:j+dmod])**2))
                     else:
                         input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
 
             # torch.cuda.empty_cache()
 
-        # output_seq = x[:,:,:219]
+        #output_seq = x[:,:,:219]
 
         return output_seq
 

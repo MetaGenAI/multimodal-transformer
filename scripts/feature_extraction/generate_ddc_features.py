@@ -149,7 +149,7 @@ for i in tasks:
     features = np.transpose(ResampleLinear1D(np.transpose(features,(1,0,2)),int(np.floor(features.shape[1]*0.01/0.016666666))),(1,0,2))[0,1:,:]
     # features = downsample_signal(features[0], 0.01666666666667/0.01)
     print(features.shape)
-    # np.save(features_file,features)
+    np.save(features_file,features)
     window = signal.hamming(ceil(constants.HUMAN_DELTA/opt.step_size))
     smoothed_peaks = np.convolve(peak_probs,window,mode='same')
 
