@@ -5,7 +5,6 @@ import os.path
 import sys
 import argparse
 import time
-from models import create_model
 import json, pickle
 import torch
 from math import ceil
@@ -20,9 +19,10 @@ if not os.path.isdir(DATA_DIR):
 if not os.path.isdir(EXTRACT_DIR):
     os.mkdir(EXTRACT_DIR)
 sys.path.append(ROOT_DIR)
+sys.path.append(THIS_DIR)
 
-from scripts.generation.level_generation_utils import extract_features, make_level_from_notes, get_notes_from_stepmania_file
 import models.constants as constants
+from models import create_model
 from feature_extraction import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
 
 parser = argparse.ArgumentParser(description='Get DDC features from song features')
