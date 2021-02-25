@@ -9,3 +9,5 @@ scripts/training/block_selection_new2/*.pth
 scripts/training/experiment_name/*
 scripts/training/aistpp1/*
 scripts/training/aistpp_short/*
+data/features_sample.tar.gz
+data/features_sample/*

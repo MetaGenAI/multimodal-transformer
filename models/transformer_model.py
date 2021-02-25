@@ -121,15 +121,25 @@ class TransformerModel(BaseModel):
 
         target_shape = target_.shape
         input_shape = input_.shape
-        # 0 batch dimension, 1 window dimension, 2 input channel dimension, 3 time dimension
-        # print(input_shape)
+        # It's coming as 0 batch dimension, 1 window dimension, 2 input channel dimension, 3 time dimension
+        #print(input_shape)
         self.input = input_.reshape((input_shape[0]*input_shape[1], input_shape[2], input_shape[3])).permute(2,0,1).to(self.device)
 
         self.target = target_.reshape((target_shape[0]*target_shape[1], target_shape[2], target_shape[3])).permute(2,0,1).to(self.device)
 
     def forward(self):
+        #print(torch.mean((self.target[:-1,:,:]-self.input[self.opt.prefix_length+1:,:,:219])**2))
+        #input_temp = self.input.clone()
         self.output = self.net.forward(self.input.float(),self.src_mask)
         self.metric_mse = self.loss_mse = self.criterion(self.output[self.opt.prefix_length:],self.target)
+        #print(torch.mean((self.target[:-1,:,:]-input_temp[self.opt.prefix_length+1:,:,:219])**2))
+        #print(self.input.shape)
+        #print(self.target.shape)
+        #print((self.output[self.opt.prefix_length:]-self.target)**2)
+        #print(torch.mean((self.output[self.opt.prefix_length:]-self.target)**2))
+        #print(torch.mean((self.output[self.opt.prefix_length:-1]-self.input[self.opt.prefix_length+1:])**2))
+        #print(self.target[:-1,:,:])
+        #print(self.input[self.opt.prefix_length+1:,:,:219])
 
     def generate(self, features, temperature, mod_sizes = {}, predicted_mods = [], use_beam_search=False):
         opt = self.opt
@@ -155,8 +165,6 @@ class TransformerModel(BaseModel):
         # # we also pad at the end to allow generation to be of the same length of sequence
         # x = np.concatenate((x,np.zeros(( x.shape[0],max(0,input_length-(time_offset)) ))),1)
 
-        x = torch.tensor(x)
-
         # 0 batch dimension, 1 input channel dimension, 2 time dimension
         # -> 0 time dimension, 1 batch dimenison, 2 channel dimension
         x = x.unsqueeze(0).permute(2,0,1).to(self.device)
@@ -165,7 +173,7 @@ class TransformerModel(BaseModel):
         # print(input_seq.shape)
 
         output_seq = None
-        self.eval()
+        #self.eval()
         out_mod_indices = {}
         in_mod_indices = {}
         i=0
@@ -179,34 +187,50 @@ class TransformerModel(BaseModel):
             dmod = mod_sizes[mod]
             i += dmod
 
-        for t in range(sequence_length-input_length-1):
-        # for t in range(sequence_length):
-            # time.sleep(1)
-            print(t)
-            next_prediction = self.net.forward(input_seq.float(),self.src_mask)[self.opt.prefix_length:self.opt.prefix_length+1].detach()
-            if t == 0:
-                output_seq = next_prediction
-            else:
-                output_seq = torch.cat([output_seq, next_prediction])
-                #output_seq = torch.cat([output_seq, x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,:219]])
-            if t < sequence_length-1:
-                for mod in input_mods:
-                    dmod = mod_sizes[mod]
-                    i = in_mod_indices[mod]
-                    if mod in predicted_mods:
-                        j = out_mod_indices[mod]
-                        print(j)
-                        #input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],next_prediction[:,:,j:j+dmod]],0)
-                        input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
-                        print(torch.mean((x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]-next_prediction[:,:,j:j+dmod])**2))
-                    else:
-                        input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
 
-            # torch.cuda.empty_cache()
 
-        #output_seq = x[:,:,:219]
+        with torch.no_grad():
+            for t in range(sequence_length-input_length-1):
+            # for t in range(sequence_length):
+                # time.sleep(1)
+                print(t)
+                next_prediction = self.net.forward(input_seq.float(),self.src_mask)[self.opt.prefix_length:self.opt.prefix_length+1].detach()
+                #indices = np.random.choice(range(0,sequence_length-max(input_length,time_offset+output_length)),size=10,replace=True)
+                #input_windows = [x[i:i+input_length] for i in indices]
+                #next_prediction = self.net.forward(torch.cat([input_seq]+input_windows,1).float(),self.src_mask)[self.opt.prefix_length:self.opt.prefix_length+1,:1].detach()
 
-        return output_seq
+                #next_prediction = self.net.forward(input_seq.float(),self.src_mask).detach()
+                #input_temp=x.clone()
+                #next_prediction = self.net.forward(input_temp[t:t+opt.input_seq_len].float(),self.src_mask).detach()
+                if t == 0:
+                    output_seq = next_prediction
+                else:
+                    output_seq = torch.cat([output_seq, next_prediction])
+                    #output_seq = torch.cat([output_seq, x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,:219]])
+                if t < sequence_length-1:
+                    for mod in input_mods:
+                        dmod = mod_sizes[mod]
+                        i = in_mod_indices[mod]
+                        if mod in predicted_mods:
+                            j = out_mod_indices[mod]
+                            #print(j)
+                            #input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],next_prediction[:,:,j:j+dmod]],0)
+                            input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
+                            #print(torch.mean((x[t+opt.prefix_length+1:t+opt.prefix_length+output_length+1,:,i:i+dmod]-next_prediction[self.opt.prefix_length:,:,j:j+dmod])**2))
+                            #print(torch.mean((x[t+opt.prefix_length+1:t+opt.prefix_length+output_length+1,:,i:i+dmod]-next_prediction[self.opt.prefix_length:,:,j:j+dmod])**2))
+                            print(torch.mean((x[t+opt.prefix_length+1:t+opt.prefix_length+1+1,:,i:i+dmod]-next_prediction[:,:,j:j+dmod])**2))
+                            #print(x[0,0,0])
+                            #print(output_length)
+                            #print(x[t+opt.prefix_length+1:t+opt.prefix_length+output_length+1,:,i:i+dmod])
+                            #print(next_prediction[self.opt.prefix_length:,:,j:j+dmod])
+                        else:
+                            input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
+
+                # torch.cuda.empty_cache()
+
+            #output_seq = x[:,:,:219]
+
+            return output_seq
 
 
     def backward(self):
