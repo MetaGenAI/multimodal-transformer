@@ -63,5 +63,5 @@ for i in tasks:
     mfcc_features = np.load(mfcc_features_file).transpose(1,0)
     ddc_features = np.load(ddc_features_file)
     x = pca.fit_transform(ddc_features)
-    features = np.cat([mfcc_features,x[:,:2]],1)
+    features = np.concatenate([mfcc_features,x[:,:2]],1)
     np.save(features_file,features)
