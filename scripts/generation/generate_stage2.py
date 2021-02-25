@@ -82,10 +82,16 @@ model.load_networks(checkpoint)
 ''' GET SONG FEATURES for stage two '''
 #%%
 
-sound_features = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.mp3_multi_mel_80.npy_ddc_hidden.npy")
-motion_features = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.pkl_joint_angles_mats.npy")
+seq_id="gLH_sBM_cAll_d16_mLH1_ch04"
 
-# motion_features = np.zeros((features.shape[0],219))
+sound_features = np.load("data/features/"+seq_id+".mp3_multi_mel_80.npy_ddc_hidden.npy")
+#sound_features = np.load("lou_bega_mambolovania_-250249188128876949.mp3_multi_mel_80.npy_ddc_hidden.npy")
+motion_features = np.load("data/features/"+seq_id+".pkl_joint_angles_mats.npy")
+
+sound_features = sound_features[:1024]
+motion_features = motion_features[:1024]
+
+#motion_features = np.zeros((sound_features.shape[0],219))
 
 features = np.concatenate([motion_features,sound_features],1)
 features = features.transpose(1,0)
@@ -95,4 +101,5 @@ predicted_modes = model.generate(features, 1.0, mod_sizes = {"pkl_joint_angles_m
 
 print(predicted_modes)
 
-np.save("gWA_sFM_cAll_d26_mWA1_ch09.pkl_joint_angles_mats.generated.test.npz",predicted_modes.cpu().numpy())
+np.save(seq_id+".pkl_joint_angles_mats.generated.test.npz",predicted_modes.cpu().numpy())
+#np.save("mambolovania",predicted_modes.cpu().numpy())

@@ -12,3 +12,5 @@ data/20210209_motions.zip
 data/motions_old/*
 data_sample/*
 features_sample.tar.gz
+scripts/training/aistpp_short/*
+**/*.pyc

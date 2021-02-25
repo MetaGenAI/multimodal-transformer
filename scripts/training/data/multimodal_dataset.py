@@ -65,12 +65,12 @@ class MultimodalDataset(BaseDataset):
             file_too_short = False
             for i, mod in enumerate(input_mods):
                 feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
-                # print(feature_file)
+                #print(feature_file)
                 try:
                     features = np.load(feature_file)
                     length = features.shape[0]
-                    # print(features.shape)
-                    # print(length)
+                    #print(features.shape)
+                    #print(length)
                     if i == 0:
                         length_0 = length
                     else:
@@ -105,37 +105,40 @@ class MultimodalDataset(BaseDataset):
             for mod in input_mods:
                 feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
                 self.input_features[mod][base_filename] = feature_file
-            # shortest_length = 99999999999
-            # for mod in input_mods:
-            #     length = np.load(self.input_features[mod][base_filename]).shape[0]
-            #     if length < shortest_length:
-            #         shortest_length = length
-            # for mod in input_mods:
-            #     np.save(self.input_features[mod][base_filename],np.load(self.input_features[mod][base_filename])[:shortest_length])
-            # for i, mod in enumerate(input_mods):
-            #     length = np.load(self.input_features[mod][base_filename]).shape[0]
-            #     if i == 0:
-            #         length_0 = length
-            #     else:
-            #         assert length == length_0
+
+            #shortest_length = 99999999999
+            #for mod in input_mods:
+            #    length = np.load(self.input_features[mod][base_filename]).shape[0]
+            #    if length < shortest_length:
+            #        shortest_length = length
+            #for mod in input_mods:
+            #    np.save(self.input_features[mod][base_filename],np.load(self.input_features[mod][base_filename])[:shortest_length])
+            #for i, mod in enumerate(input_mods):
+            #    length = np.load(self.input_features[mod][base_filename]).shape[0]
+            #    if i == 0:
+            #        length_0 = length
+            #    else:
+            #        assert length == length_0
 
             for mod in output_mods:
                 feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
                 self.output_features[mod][base_filename] = feature_file
-            # shortest_length = 99999999999
-            # for mod in output_mods:
-            #     length = np.load(self.output_features[mod][base_filename]).shape[0]
-            #     if length < shortest_length:
-            #         shortest_length = length
-            # for mod in output_mods:
-            #     if mod not in input_mods:
-            #         np.save(self.output_features[mod][base_filename],np.load(self.output_features[mod][base_filename])[:shortest_length])
-            # for i, mod in enumerate(output_mods):
-            #     length = np.load(self.output_features[mod][base_filename]).shape[0]
-            #     if i == 0:
-            #         length_0 = length
-            #     else:
-            #         assert length == length_0
+
+            #shortest_length = 99999999999
+            #for mod in output_mods:
+            #    length = np.load(self.output_features[mod][base_filename]).shape[0]
+            #    if length < shortest_length:
+            #        shortest_length = length
+            #for mod in output_mods:
+            #    if mod not in input_mods:
+            #        np.save(self.output_features[mod][base_filename],np.load(self.output_features[mod][base_filename])[:shortest_length])
+            #for i, mod in enumerate(output_mods):
+            #    length = np.load(self.output_features[mod][base_filename]).shape[0]
+            #    if i == 0:
+            #        length_0 = length
+            #    else:
+            #        assert length == length_0
+
             self.base_filenames.append(base_filename)
 
         print("sequences added: "+str(len(self.base_filenames)))

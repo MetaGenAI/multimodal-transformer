@@ -6,10 +6,10 @@
 py=python
 dataset=multimodal
 model=transformer
-exp=aistpp1
+exp=aistpp_big
 
-$py scripts/training/train.py --data_dir=./data_sample --dataset_name=$dataset --model=$model --batch_size=2 --num_windows=3 --nepoch=500 --nepoch_decay=500 \
-    --print_freq=10 --experiment_name=$exp --save_by_iter --save_latest_freq=500 --checkpoints_dir scripts/training\
+$py scripts/training/train.py --data_dir=./data_sample --dataset_name=$dataset --model=$model --batch_size=4 --num_windows=10 --nepoch=500 --nepoch_decay=500 \
+    --print_freq=10 --experiment_name=$exp --save_by_iter --save_latest_freq=5000 --checkpoints_dir scripts/training\
     --dins="219,512" \
     --douts="219" \
     --input_modalities="pkl_joint_angles_mats,mp3_multi_mel_80.npy_ddc_hidden" \
@@ -18,10 +18,12 @@ $py scripts/training/train.py --data_dir=./data_sample --dataset_name=$dataset -
     --output_lengths="20" \
     --output_time_offset="121" \
     --predicted_inputs="20,0" \
+    --nlayers=16 \
+    --nhead=15 \
+    --d_model=1500 \
+    --dhid=1500 \
     --val_epoch_freq=0 \
-    --nlayers=2 \
-    --dhid 512 \
     --gpu_ids=0 \
-    --workers=0 \
-    # --continue_train \
-    # --load_iter=1600000 \
+    --workers=4 \
+    #--continue_train \
+    #--load_iter=400000 \
