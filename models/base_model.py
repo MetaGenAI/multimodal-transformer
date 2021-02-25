@@ -75,8 +75,13 @@ class BaseModel:
         :return:
         """
         if self.gpu_ids:
-            self.net = networks.init_net(self.net, self.opt.init_type, self.opt.init_gain,
-                                self.opt.gpu_ids)  # takes care of pushing net to cuda
+            # self.net = networks.init_net(self.net, self.opt.init_type, self.opt.init_gain,
+            #                     self.opt.gpu_ids)  # takes care of pushing net to cuda
+            for module_name in self.module_names:
+                print(module_name)
+                net = getattr(self, "net" + module_name)
+                networks.init_net(net, self.opt.init_type, self.opt.init_gain,
+                                    self.opt.gpu_ids)  # takes care of pushing net to cuda
             assert torch.cuda.is_available()
             ### what is this thing for?
             # for loss_name in self.loss_names:

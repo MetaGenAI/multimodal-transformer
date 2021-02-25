@@ -37,13 +37,27 @@ class MultimodalDataset(BaseDataset):
 
         input_mods = self.opt.input_modalities.split(",")
         output_mods = self.opt.output_modalities.split(",")
+        self.input_lengths = input_lengths = [int(x) for x in self.opt.input_lengths.split(",")]
+        self.output_lengths = output_lengths = [int(x) for x in self.opt.output_lengths.split(",")]
+        self.output_time_offsets = output_time_offsets = [int(x) for x in self.opt.output_time_offsets.split(",")]
+        self.input_time_offsets = input_time_offsets = [int(x) for x in self.opt.input_time_offsets.split(",")]
+
+        if len(output_time_offsets) < len(output_mods):
+            if len(output_time_offsets) == 1:
+                self.output_time_offsets = output_time_offsets = output_time_offsets*len(output_mods)
+            else:
+                raise Exception("number of output_time_offsets doesnt match number of output_mods")
+
+        if len(input_time_offsets) < len(input_mods):
+            if len(input_time_offsets) == 1:
+                self.input_time_offsets = input_time_offsets = input_time_offsets*len(input_mods)
+            else:
+                raise Exception("number of input_time_offsets doesnt match number of input_mods")
 
         self.input_features = {input_mod:{} for input_mod in input_mods}
         self.output_features = {output_mod:{} for output_mod in output_mods}
 
-        input_seq_len = self.opt.input_seq_len
-        output_seq_len = self.opt.output_seq_len
-        min_length = max(input_seq_len, self.opt.output_time_offset + output_seq_len) - min(0,self.opt.output_time_offset)
+        min_length = max(max(np.array(input_lengths) + np.array(input_time_offsets)), max(np.array(output_time_offsets) + np.array(output_lengths)) ) - min(0,min(output_time_offsets))
         print(min_length)
 
         #Get the list of files containing features (in numpy format for now), and populate the dictionaries of input and output features (separated by modality)
@@ -136,13 +150,10 @@ class MultimodalDataset(BaseDataset):
         parser.add_argument('--sampling_rate', default=44100, type=float)
         parser.add_argument('--input_modalities', default='mp3_mel_100')
         parser.add_argument('--output_modalities', default='mp3_mel_100')
-        parser.add_argument('--input_seq_len', type=int, default=512)
-        parser.add_argument('--output_seq_len', type=int, default=512)
-        parser.add_argument('--padded_length', type=int, default=3000000)
-        parser.add_argument('--chunk_length', type=int, default=9000)
-        # the input features at each time step consiste of the features at the time steps from now to time_shifts in the future
-        parser.add_argument('--output_time_offset', type=int, default=1, help='time shift between the last read input, and the output predicted. The default value of 1 corresponds to predicting the next output')
-        parser.add_argument('--flatten_context', action='store_true', help='whether to flatten the temporal context added for each time point into the feature dimension, or not')
+        parser.add_argument('--input_lengths', help='input sequence length')
+        parser.add_argument('--output_lengths', help='output sequence length')
+        parser.add_argument('--output_time_offsets', default="1", help='time shift between the last read input, and the output predicted. The default value of 1 corresponds to predicting the next output')
+        parser.add_argument('--input_time_offsets', default="0", help='time shift between the beginning of each modality and the first modality')
         parser.add_argument('--max_token_seq_len', type=int, default=1024)
         parser.set_defaults(output_length=1)
         parser.set_defaults(output_channels=1)
@@ -155,68 +166,63 @@ class MultimodalDataset(BaseDataset):
     def __getitem__(self, item):
         base_filename = self.base_filenames[item]
 
-        input_length = self.opt.input_seq_len
-        output_length = self.opt.output_seq_len
-        time_offset = self.opt.output_time_offset
+        input_lengths = self.input_lengths
+        output_lengths = self.output_lengths
+        output_time_offsets = self.output_time_offsets
+        input_time_offsets = self.input_time_offsets
 
         input_mods = self.opt.input_modalities.split(",")
         output_mods = self.opt.output_modalities.split(",")
 
-        input_features = None
-        output_features = None
-        input_mod_sizes = []
-        output_mod_sizes = []
+
+        input_features = []
+        output_features = []
 
         for i, mod in enumerate(input_mods):
-            if i==0:
-                input_features = np.load(self.input_features[mod][base_filename])
-                input_mod_sizes.append(input_features.shape[0])
-            else:
-                input_feature = np.load(self.input_features[mod][base_filename])
-                input_mod_sizes.append(input_feature.shape[0])
-                input_features = np.concatenate([input_features,input_feature], 1)
+            input_feature = np.load(self.input_features[mod][base_filename])
+            input_features.append(input_feature)
 
         for i, mod in enumerate(output_mods):
-            if i==0:
-                output_features = np.load(self.output_features[mod][base_filename])
-                output_mod_sizes.append(output_features.shape[0])
-            else:
-                output_feature = np.load(self.output_features[mod][base_filename])
-                output_mod_sizes.append(output_feature.shape[0])
-                output_features = np.concatenate([output_features,output_feature], 1)
+            output_feature = np.load(self.output_features[mod][base_filename])
+            output_features.append(output_feature)
 
-        x = input_features.transpose(1,0)
-        y = output_features.transpose(1,0)
-        # print(x.shape)
+        # print(input_features[0].shape)
+        x = [input_feature.transpose(1,0) for input_feature in input_features]
+        y = [output_feature.transpose(1,0) for output_feature in output_features]
 
         # we pad the song features with zeros to imitate during training what happens during generation
-        if len(x.shape) == 2: # one feature dimension in y
-            x = np.concatenate((np.zeros(( x.shape[0],max(0,time_offset) )),x),1)
-            y = np.concatenate((np.zeros(( y.shape[0],max(0,time_offset) )),y),1)
-            # we also pad at the end to allow generation to be of the same length of sequence, by padding an amount corresponding to time_offset
-            x = np.concatenate((x,np.zeros(( x.shape[0],max(0,input_length-(time_offset+output_length-1)) ))),1)
-            y = np.concatenate((y,np.zeros(( y.shape[0],max(0,input_length-(time_offset+output_length-1)) ))),1)
+        x = [np.concatenate((np.zeros(( xx.shape[0],max(0,max(output_time_offsets)) )),xx),1) for xx in x]
+        y = [np.concatenate((np.zeros(( yy.shape[0],max(0,max(output_time_offsets)) )),yy),1) for yy in y]
+        # we also pad at the end to allow generation to be of the same length of sequence, by padding an amount corresponding to time_offset
+        x = [np.concatenate((xx,np.zeros(( xx.shape[0],max(0,max(input_lengths)+max(input_time_offsets)-(min(output_time_offsets)+min(output_lengths)-1)) ))),1) for xx in x]
+        y = [np.concatenate((yy,np.zeros(( yy.shape[0],max(0,max(input_lengths)+max(input_time_offsets)-(min(output_time_offsets)+min(output_lengths)-1)) ))),1) for yy in y]
 
         ## WINDOWS ##
         # sample indices at which we will get opt.num_windows windows of the sequence to feed as inputs
             # TODO: make this deterministic, and determined by `item`, so that one epoch really corresponds to going through all the data..
-        sequence_length = x.shape[-1]
-        indices = np.random.choice(range(0,sequence_length-max(input_length,time_offset+output_length)),size=self.opt.num_windows,replace=True)
-        # print(indices)
+        sequence_length = x[0].shape[-1]
+        indices = np.random.choice(range(0,sequence_length-max(max(input_lengths)+max(input_time_offsets),max(output_time_offsets)+max(output_lengths))),size=self.opt.num_windows,replace=True)
 
         ## CONSTRUCT TENSOR OF INPUT FEATURES ##
-        input_windows = [x[:,i:i+input_length] for i in indices]
-        input_windows = torch.tensor(input_windows)
+        input_windows = [torch.tensor([xx[:,i+input_time_offsets[j]:i+input_time_offsets[j]+input_lengths[j]] for i in indices]).float() for j,xx in enumerate(x)]
         # input_windows = (input_windows - input_windows.mean())/torch.abs(input_windows).max()
 
         ## CONSTRUCT TENSOR OF OUTPUT FEATURES ##
-        output_windows = [y[:,i+time_offset:i+time_offset+output_length] for i in indices]
-        output_windows = torch.tensor(output_windows)
+        output_windows = [torch.tensor([yy[:,i+output_time_offsets[j]:i+output_time_offsets[j]+output_lengths[j]] for i in indices]).float() for j,yy in enumerate(y)]
         # output_windows = (output_windows - output_windows.mean())/torch.abs(output_windows).max()
 
         # print(input_windows.shape)
 
-        return {'input': input_windows.float(), 'target': output_windows.float(), 'feature_sizes': (input_mod_sizes, output_mod_sizes)}
+        # return {'input': input_windows, 'target': output_windows}
+        return_dict = {}
+
+        for i,mod in enumerate(input_mods):
+            # print(input_windows[i].shape)
+            return_dict["in_"+mod] = input_windows[i]
+        for i,mod in enumerate(output_mods):
+            return_dict["out_"+mod] = output_windows[i]
+
+        return return_dict
 
     def __len__(self):
         return len(self.base_filenames)
