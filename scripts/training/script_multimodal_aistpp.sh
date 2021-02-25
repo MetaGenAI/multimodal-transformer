@@ -6,7 +6,8 @@
 py=python
 dataset=multimodal
 model=transformer
-exp=aistpp_big
+#exp=aistpp_big
+exp=aistpp_short
 
 $py scripts/training/train.py --data_dir=./data_sample --dataset_name=$dataset --model=$model --batch_size=4 --num_windows=10 --nepoch=500 --nepoch_decay=500 \
     --print_freq=10 --experiment_name=$exp --save_by_iter --save_latest_freq=5000 --checkpoints_dir scripts/training\
@@ -18,12 +19,12 @@ $py scripts/training/train.py --data_dir=./data_sample --dataset_name=$dataset -
     --output_lengths="20" \
     --output_time_offset="121" \
     --predicted_inputs="20,0" \
-    --nlayers=16 \
-    --nhead=15 \
-    --d_model=1500 \
-    --dhid=1500 \
+    --nlayers=12 \
+    --nhead=10 \
+    --d_model=800 \
+    --dhid=800 \
     --val_epoch_freq=0 \
     --gpu_ids=0 \
     --workers=4 \
     #--continue_train \
-    #--load_iter=400000 \
+    #--load_iter=240000 \

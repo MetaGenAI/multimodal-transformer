@@ -13,4 +13,6 @@ data/motions_old/*
 data_sample/*
 features_sample.tar.gz
 scripts/training/aistpp_short/*
+data/features_sample.tar.gz
+data/features_sample/*
 **/*.pyc
