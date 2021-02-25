@@ -8,6 +8,11 @@ scripts/training/block_placement_ddc2/*.pth
 scripts/training/block_selection_new2/*.pth
 scripts/training/experiment_name/*
 scripts/training/aistpp1/*
+data/20210209_motions.zip
+data/motions_old/*
+data_sample/*
+features_sample.tar.gz
 scripts/training/aistpp_short/*
 data/features_sample.tar.gz
 data/features_sample/*
+**/*.pyc

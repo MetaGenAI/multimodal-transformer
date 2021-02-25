@@ -9,23 +9,22 @@ model=transformer
 #exp=aistpp_big
 exp=aistpp_short
 
-$py scripts/training/train.py --data_dir=./data --dataset_name=$dataset --model=$model --batch_size=16 --num_windows=10 --nepoch=1000 --nepoch_decay=1000 \
+$py scripts/training/train.py --data_dir=./data_sample --dataset_name=$dataset --model=$model --batch_size=4 --num_windows=10 --nepoch=500 --nepoch_decay=500 \
     --print_freq=10 --experiment_name=$exp --save_by_iter --save_latest_freq=5000 --checkpoints_dir scripts/training\
-    --din=$((219+512)) \
-    --dout=$((219)) \
+    --dins="219,512" \
+    --douts="219" \
     --input_modalities="pkl_joint_angles_mats,mp3_multi_mel_80.npy_ddc_hidden" \
     --output_modalities="pkl_joint_angles_mats" \
-    --input_seq_len=128 \
-    --lr 0.00002 \
+    --input_lengths="140,240" \
+    --output_lengths="20" \
+    --output_time_offset="121" \
+    --predicted_inputs="20,0" \
     --nlayers=12 \
     --nhead=10 \
     --d_model=800 \
     --dhid=800 \
-    --output_seq_len=20 \
-    --output_time_offset=109 \
-    --prefix_length=108 \
     --val_epoch_freq=0 \
     --gpu_ids=0 \
     --workers=4 \
-    --continue_train \
-    --load_iter=240000 \
+    #--continue_train \
+    #--load_iter=240000 \

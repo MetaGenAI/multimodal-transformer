@@ -1,15 +1,38 @@
 #### looking at the data
 import pickle
+import matplotlib.pyplot as plt
+from pymo.rotation_tools import unroll_1, unroll_2
 
 thing = pickle.load(open("data/motions/gBR_sBM_cAll_d06_mBR4_ch10.pkl", "rb"))
 thing = pickle.load(open("data/motions/gWA_sFM_cAll_d26_mWA1_ch09.pkl", "rb"))
+thing = pickle.load(open("/home/guillefix/code/mocap/PyMO/demos/data/gBR_sBM_cAll_d04_mBR0_ch01.pkl", "rb"))
+thing = pickle.load(open("/home/guillefix/Downloads/PyMO/demos/data/gBR_sBM_cAll_d04_mBR0_ch01.pkl", "rb"))
+thing = pickle.load(open("data/motions/gBR_sBM_cAll_d04_mBR0_ch01.pkl", "rb"))
+thing = pickle.load(open("/home/guillefix/Downloads/motions/gBR_sBM_cAll_d04_mBR0_ch01.pkl", "rb"))
+thing = pickle.load(open("data/motions/gJB_sFM_cAll_d09_mJB1_ch21.pkl", "rb"))
+thing = pickle.load(open("/home/guillefix/Downloads/aist_plusplus_final_motions_gBR_sBM_cAll_d04_mBR0_ch01.pkl", "rb"))
 
 thing['smpl_poses'].shape
+thing.keys()
 poses = thing['smpl_poses']
+poses = poses.reshape(-1,24*3)
+# unrolled_poses = unroll_1(poses.reshape(-1,3))
+rots = poses[:,:3]
+for i in range(24):
+    poses[:,i*3:(i+1)*3] = unroll_2(poses[:,i*3:(i+1)*3])
+unrolled_poses.shape
+poses = unrolled_poses.reshape(-1,24*3)
 poses[593:693,:3]
 poses[593:693,:3][38:]
 
-plt.matshow(poses[593:693,:3])
+poses[:300,:3]
+import numpy as np
+np.diff(poses[90:110,:3], axis=0)
+np.diff(poses[90:110,:3], axis=0)
+
+plt.matshow(poses[:300,:3])
+# plt.matshow(poses[1000:1500,:3])
+plt.matshow(poses[:300,:3])
 
 thing
 
@@ -50,7 +73,6 @@ max(1,2)
 #playing with masks
 
 import torch
-import matplotlib.pyplot as plt
 
 sz=20
 mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
