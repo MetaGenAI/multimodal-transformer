@@ -4,6 +4,9 @@ from contextlib import contextmanager
 from scripts.misc.utils import utils
 from collections import OrderedDict
 from . import networks
+# imports the torch_xla package
+import torch_xla
+import torch_xla.core.xla_model as xm
 
 # Benefits of having one skeleton, e.g. for train - is that you can keep all the incremental changes in
 # one single code, making it your streamlined and updated script -- no need to keep separate logs on how
@@ -24,7 +27,13 @@ class BaseModel:
         self.opt = opt
         self.gpu_ids = opt.gpu_ids
         self.is_train = opt.is_train
-        self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
+        self.device = None
+        if self.tpu_ids:
+            self.device = xm.xla_device()
+        elif self.gpu_ids:
+            self.device = torch.device('cuda:{}'.format(self.gpu_ids[0]))
+        else:
+            self.device = torch.device('cpu')
         self.save_dir = os.path.join(opt.checkpoints_dir, opt.experiment_name)
         self.loss_names = []
         self.metric_names = []

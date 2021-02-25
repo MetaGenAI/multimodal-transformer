@@ -24,7 +24,7 @@ $py scripts/training/train.py --data_dir=./data_sample --dataset_name=$dataset -
     --d_model=800 \
     --dhid=800 \
     --val_epoch_freq=0 \
-    --gpu_ids=0 \
+    --tpu_ids=0 \
     --workers=4 \
     #--continue_train \
     #--load_iter=240000 \
