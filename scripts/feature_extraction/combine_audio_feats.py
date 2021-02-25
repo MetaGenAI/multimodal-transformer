@@ -58,7 +58,7 @@ for i in tasks:
     ddc_features_file = audio_file+"_"+"ddc_hidden"+".npy"
     mfcc_features_file = audio_file+"_"+feature_name+"_"+str(feature_size)+".npy"
     features_file = audio_file+"_mel_ddcpca.npy"
-    mfcc_features = np.load(mfcc).tranpose(1,0)
+    mfcc_features = np.load(mfcc_features_file).tranpose(1,0)
     ddc_features = np.load(ddc_features_file)
     x = pca.fit_transform(ddc_features)
     features = np.cat([mfcc_features,x[:,:2]],1)
