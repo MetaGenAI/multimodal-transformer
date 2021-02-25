@@ -44,6 +44,7 @@ print("creating {} of size {}".format(feature_name, feature_size))
 
 #assuming mp3 for now. TODO: generalize
 candidate_audio_files = sorted(data_path.glob('**/*.mp3'), key=lambda path: path.parent.__str__())
+candidate_feature_files = sorted(data_path.glob('**/*mp3_multi_mel_80.npy'), key=lambda path: path.parent.__str__())
 num_tasks = len(candidate_audio_files)
 num_tasks_per_job = num_tasks//size
 tasks = list(range(rank*num_tasks_per_job,(rank+1)*num_tasks_per_job))
@@ -54,8 +55,9 @@ from sklearn import decomposition
 pca = decomposition.PCA(n_components=512)
 for i in tasks:
     path = candidate_audio_files[i]
+    path_ddc = candidate_feature_files[i]
     audio_file = path.__str__()
-    ddc_features_file = audio_file+"_"+"ddc_hidden"+".npy"
+    ddc_features_file = str(path_ddc)+"_"+"ddc_hidden"+".npy"
     mfcc_features_file = audio_file+"_"+feature_name+"_"+str(feature_size)+".npy"
     features_file = audio_file+"_mel_ddcpca.npy"
     mfcc_features = np.load(mfcc_features_file).transpose(1,0)
