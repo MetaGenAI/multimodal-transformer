@@ -135,6 +135,7 @@ for i in tasks:
     path = candidate_feature_files[i]
     features_file = str(path)+"_"+"ddc_hidden"+".npy"
     print(path)
+
     sr = opt.sampling_rate
     hop = int(opt.step_size*sr)
     features = np.load(path)
