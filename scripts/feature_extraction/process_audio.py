@@ -22,8 +22,8 @@ parser = argparse.ArgumentParser(description="Preprocess songs data")
 parser.add_argument("data_path", type=str, help="Directory contining Beat Saber level folders")
 parser.add_argument("--feature_name", metavar='', type=str, default="mel", help="mel, chroma, multi_mel")
 parser.add_argument("--feature_size", metavar='', type=int, default=100)
-parser.add_argument("--sampling_rate", metavar='', type=float, default=44100.0)
 parser.add_argument("--step_size", metavar='', type=float, default=0.01666666666)
+parser.add_argument("--sampling_rate", metavar='', type=float, default=96000)
 parser.add_argument("--replace_existing", action="store_true")
 
 args = parser.parse_args()
@@ -61,13 +61,14 @@ for i in tasks:
         y_wav, sr = librosa.load(song_file_path, sr=sampling_rate)
 
         sr = sampling_rate
-        hop = int(sr * step_size)
+        hop = int(round(sr * step_size))
 
         #get feature
         if feature_name == "chroma":
             features = extract_features_hybrid(y_wav,sr,hop)
         elif feature_name == "mel":
             features = extract_features_mel(y_wav,sr,hop,mel_dim=feature_size)[:,1:]
+            #print(features.shape)
         elif feature_name == "multi_mel":
             features = extract_features_multi_mel(y_wav, sr=sampling_rate, hop=hop, nffts=[1024,2048,4096], mel_dim=feature_size)
 

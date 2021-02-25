@@ -1,6 +1,19 @@
 import os
 import torch
 from contextlib import contextmanager
+import sys
+THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(THIS_DIR, os.pardir))
+DATA_DIR = os.path.join(ROOT_DIR, 'data')
+EXTRACT_DIR = os.path.join(DATA_DIR, 'extracted_data')
+if not os.path.isdir(DATA_DIR):
+    os.mkdir(DATA_DIR)
+if not os.path.isdir(EXTRACT_DIR):
+    os.mkdir(EXTRACT_DIR)
+print(ROOT_DIR)
+print(THIS_DIR)
+sys.path.insert(0,ROOT_DIR)
+
 from scripts.misc.utils import utils
 from collections import OrderedDict
 from . import networks
@@ -209,7 +222,8 @@ class BaseModel:
                 net = getattr(self, 'net' + name)
 
                 if len(self.gpu_ids) > 0 and torch.cuda.is_available():
-                    torch.save(net.module.state_dict(), save_path)
+                    #torch.save(net.module.state_dict(), save_path)
+                    torch.save(net.cpu().state_dict(), save_path)
                     net.cuda(self.gpu_ids[0])
                 else:
                     torch.save(net.cpu().state_dict(), save_path)

@@ -16,3 +16,5 @@ scripts/training/aistpp_short/*
 data/features_sample.tar.gz
 data/features_sample/*
 **/*.pyc
+scripts/training/aistpp_212/*
+scripts/training/aistpp_212_mfcc/*
