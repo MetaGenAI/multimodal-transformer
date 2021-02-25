@@ -22,9 +22,11 @@ parser = argparse.ArgumentParser(description="Preprocess songs data")
 parser.add_argument("data_path", type=str, help="Directory contining Beat Saber level folders")
 parser.add_argument("--feature_name", metavar='', type=str, default="mel", help="mel, chroma, multi_mel")
 parser.add_argument("--feature_size", metavar='', type=int, default=100)
+parser.add_argument("--sampling_rate", metavar='', type=float, default=44100.0)
 parser.add_argument("--step_size", metavar='', type=float, default=0.01666666666)
-parser.add_argument("--sampling_rate", metavar='', type=float, default=96000)
 parser.add_argument("--replace_existing", action="store_true")
+# parser.add_argument("--ddc_pca", action="store_true")
+
 
 args = parser.parse_args()
 
@@ -48,28 +50,24 @@ tasks = list(range(rank*num_tasks_per_job,(rank+1)*num_tasks_per_job))
 if rank < num_tasks%size:
     tasks.append(size*num_tasks_per_job+rank)
 
+from sklearn import decomposition
+pca = decomposition.PCA(n_components=512)
 for i in tasks:
     path = candidate_audio_files[i]
-    song_file_path = path.__str__()
-    # feature files are going to be saved as numpy files
-    features_file = song_file_path+"_"+feature_name+"_"+str(feature_size)+".npy"
-
-    if replace_existing or not os.path.isfile(features_file):
-        print("creating feature file",i)
-
-        # get song
-        y_wav, sr = librosa.load(song_file_path, sr=sampling_rate)
-
-        sr = sampling_rate
-        hop = int(round(sr * step_size))
-
-        #get feature
-        if feature_name == "chroma":
-            features = extract_features_hybrid(y_wav,sr,hop)
-        elif feature_name == "mel":
-            features = extract_features_mel(y_wav,sr,hop,mel_dim=feature_size)[:,1:]
-            #print(features.shape)
-        elif feature_name == "multi_mel":
-            features = extract_features_multi_mel(y_wav, sr=sampling_rate, hop=hop, nffts=[1024,2048,4096], mel_dim=feature_size)
-
-        np.save(features_file,features)
+    audio_file = path.__str__()
+    ddc_features_file = audio_file+"_"+"multi_mel_80.npy_ddc_hidden.npy"
+    mfcc_features_file = audio_file+"_"+feature_name+"_"+str(feature_size)+".npy"
+    features_file = audio_file+"_mel_ddcpca.npy"
+    mfcc_features = np.load(mfcc_features_file).transpose(1,0)
+    ddc_features = np.load(ddc_features_file)
+    ddc_features_extended = ddc_features.copy()
+    if ddc_features.shape[0]<ddc_features.shape[1]:
+        ddc_features_extended = np.tile(ddc_features,(int(np.ceil(ddc_features.shape[1]/ddc_features.shape[0])),1))
+    pca.fit(ddc_features_extended)
+    x = pca.transform(ddc_features)
+    if len(mfcc_features) > len(x):
+        mfcc_features=mfcc_features[:-1]
+    if len(x) > len(mfcc_features):
+        x = x[:-1]
+    features = np.concatenate([mfcc_features,x[:,:2]],1)
+    np.save(features_file,features)

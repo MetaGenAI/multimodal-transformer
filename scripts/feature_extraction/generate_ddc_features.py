@@ -21,8 +21,8 @@ if not os.path.isdir(EXTRACT_DIR):
 sys.path.append(ROOT_DIR)
 sys.path.append(THIS_DIR)
 
-from models import create_model
 import models.constants as constants
+from models import create_model
 from feature_extraction import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
 
 parser = argparse.ArgumentParser(description='Get DDC features from song features')
@@ -135,6 +135,7 @@ for i in tasks:
     path = candidate_feature_files[i]
     features_file = str(path)+"_"+"ddc_hidden"+".npy"
     print(path)
+
     sr = opt.sampling_rate
     hop = int(opt.step_size*sr)
     features = np.load(path)
