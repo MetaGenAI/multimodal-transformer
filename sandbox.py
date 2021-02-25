@@ -64,7 +64,18 @@ audio_feats = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.mp3_multi_mel_80
 
 audio_feats.shape
 
+audio_feats.shape
+
 plt.matshow(audio_feats[100:200,:])
+
+from sklearn import decomposition
+
+pca = decomposition.PCA(n_components=512)
+
+x = pca.fit_transform(audio_feats)
+x.shape
+
+plt.matshow(x[100:200,:2])
 
 audio_feats.shape
 max(1,2)
