@@ -1,10 +1,12 @@
 import numpy as np
-import librosa
+# import librosa
 from pathlib import Path
 import json
 import os.path
 import sys
 import argparse
+import pickle
+import torch
 
 THIS_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.abspath(os.path.join(os.path.join(THIS_DIR, os.pardir), os.pardir))
@@ -20,10 +22,6 @@ from scripts.feature_extraction.feature_extraction import extract_features_hybri
 parser = argparse.ArgumentParser(description="Preprocess songs data")
 
 parser.add_argument("data_path", type=str, help="Directory contining Beat Saber level folders")
-parser.add_argument("--feature_name", metavar='', type=str, default="mel", help="mel, chroma, multi_mel")
-parser.add_argument("--feature_size", metavar='', type=int, default=100)
-parser.add_argument("--sampling_rate", metavar='', type=float, default=44100.0)
-parser.add_argument("--step_size", metavar='', type=float, default=0.01)
 parser.add_argument("--replace_existing", action="store_true")
 
 args = parser.parse_args()
@@ -33,12 +31,66 @@ globals().update(vars(args))
 data_path = Path(data_path)
 
 from scipy.spatial.transform import Rotation as R
+from typing import NewType, Union, Optional
+Tensor = NewType('Tensor', torch.Tensor)
+def rot_mat_to_euler(rot_mats):
+    # Calculates rotation matrix to euler angles
+    # Careful for extreme cases of eular angles like [0.0, pi, 0.0]
 
-def get_rot_matrices(joint_traj):
+    sy = torch.sqrt(rot_mats[:, 0, 0] * rot_mats[:, 0, 0] +
+                    rot_mats[:, 1, 0] * rot_mats[:, 1, 0])
+    return torch.atan2(-rot_mats[:, 2, 0], sy)
+
+def batch_rodrigues(
+    rot_vecs: Tensor,
+    epsilon: float = 1e-8,
+) -> Tensor:
+    ''' Calculates the rotation matrices for a batch of rotation vectors
+        Parameters
+        ----------
+        rot_vecs: torch.tensor Nx3
+            array of N axis-angle vectors
+        Returns
+        -------
+        R: torch.tensor Nx3x3
+            The rotation matrices for the given axis-angle parameters
+    '''
+
+    batch_size = rot_vecs.shape[0]
+    device, dtype = rot_vecs.device, rot_vecs.dtype
+
+    angle = torch.norm(rot_vecs + 1e-8, dim=1, keepdim=True)
+    rot_dir = rot_vecs / angle
+
+    cos = torch.unsqueeze(torch.cos(angle), dim=1)
+    sin = torch.unsqueeze(torch.sin(angle), dim=1)
+
+    # Bx1 arrays
+    rx, ry, rz = torch.split(rot_dir, 1, dim=1)
+    K = torch.zeros((batch_size, 3, 3), dtype=dtype, device=device)
+
+    zeros = torch.zeros((batch_size, 1), dtype=dtype, device=device)
+    K = torch.cat([zeros, -rz, ry, rz, zeros, -rx, -ry, rx, zeros], dim=1) \
+        .view((batch_size, 3, 3))
+
+    ident = torch.eye(3, dtype=dtype, device=device).unsqueeze(dim=0)
+    rot_mat = ident + sin * K + (1 - cos) * torch.bmm(K, K)
+    return rot_mat
+
+def get_rot_matrices_from_euler(joint_traj):
     return np.stack([np.concatenate([R.from_euler('xyz',euler_angles).as_matrix().flatten() for euler_angles in np.array(joint_angles).reshape(-1,3)]) for joint_angles in joint_traj])
 
+def get_rot_matrices_from_axis_angle(joint_traj):
+    # return np.stack([np.concatenate([R.from_euler('xyz',euler_angles).as_matrix().flatten() for euler_angles in np.array(joint_angles).reshape(-1,3)]) for joint_angles in joint_traj])
+    L = len(joint_traj)
+    ident = torch.eye(3, dtype=torch.float32)
+    rot_mats = batch_rodrigues(torch.from_numpy(joint_traj).view(-1, 3)).view(
+        [L,-1, 3, 3])
+    pose_feature = (rot_mats - ident).view([L, -1])
+    return pose_feature.numpy()
+
 def get_features(motion_data):
-    joint_angle_feats = get_rot_matrices((motion_data['smpl_poses']))
+    joint_angle_feats = get_rot_matrices_from_axis_angle((motion_data['smpl_poses']))
     return np.concatenate([joint_angle_feats,motion_data['smpl_trans']],1)
 
 ## distributing tasks accross nodes ##
@@ -47,10 +99,25 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 print(rank)
-print("creating {} of size {}".format(feature_name, feature_size))
+
+from scipy.signal import resample
+from scipy.interpolate import interp1d
+
+def ResampleLinear1D(original, targetLen):
+    index_arr = np.linspace(0, len(original)-1, num=targetLen, dtype=np.float)
+    index_floor = np.array(index_arr, dtype=np.int) #Round down
+    index_ceil = index_floor + 1
+    index_rem = index_arr - index_floor #Remain
+
+    val1 = original[index_floor]
+    val2 = original[index_ceil % len(original)]
+    interp = val1 * np.expand_dims(1.0-index_rem,1) + val2 * np.expand_dims(index_rem,1)
+    assert(len(interp) == targetLen)
+    return interp
+
 
 candidate_motion_files = sorted(data_path.glob('**/*.pkl'), key=lambda path: path.parent.__str__())
-num_tasks = len(candidate_audio_files)
+num_tasks = len(candidate_motion_files)
 num_tasks_per_job = num_tasks//size
 tasks = list(range(rank*num_tasks_per_job,(rank+1)*num_tasks_per_job))
 if rank < num_tasks%size:
@@ -63,5 +130,7 @@ for i in tasks:
     if replace_existing or not os.path.isfile(features_file):
         motion_data = pickle.load(open(path,"rb"))
         features = get_features(motion_data)
+        print(features.shape)
+        features = ResampleLinear1D(features,features.shape[0]*2)
         print(features.shape)
         np.save(features_file,features)

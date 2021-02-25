@@ -109,6 +109,19 @@ def ResampleLinear1D(original, targetLen):
     assert(len(interp) == targetLen)
     return interp
 
+from math import floor
+
+def downsample_signal(original,ratio):
+    # ratio is the ratio between the time step in the original and in the new one (so it should be > 1 for downsampling)
+    old_indices = np.arange(len(original), dtype=np.int32)
+    new_indices = (old_indices // ratio).astype(np.int32)
+    M = np.zeros((int(len(original)//ratio)+1,len(original)), dtype=np.float32)
+    M[new_indices,old_indices] = 1
+    w = np.sum(M,1)
+    w = np.expand_dims(w,1)
+    print(M.shape)
+    return np.matmul(M,original)/w
+
 
 #assuming mp3 for now. TODO: generalize
 candidate_feature_files = sorted(data_path.glob('**/*mp3_multi_mel_80.npy'), key=lambda path: path.parent.__str__())
@@ -121,6 +134,7 @@ if rank < num_tasks%size:
 for i in tasks:
     path = candidate_feature_files[i]
     features_file = str(path)+"_"+"ddc_hidden"+".npy"
+    print(path)
     sr = opt.sampling_rate
     hop = int(opt.step_size*sr)
     features = np.load(path)
@@ -128,10 +142,12 @@ for i in tasks:
     #generate level
     # first_samples basically works as a padding, for the first few outputs, which don't have any "past part" of the song to look at.
     first_samples = torch.full((1,opt.output_channels,receptive_field//2),constants.START_STATE,dtype=torch.float)
+    print(features.shape)
     features, peak_probs = model.generate_features(features)
     peak_probs = peak_probs[0,:,-1].cpu().detach().numpy()
     features = features.cpu().detach().numpy()
     features = np.transpose(ResampleLinear1D(np.transpose(features,(1,0,2)),int(np.floor(features.shape[1]*0.01/0.016666666))),(1,0,2))[0,1:,:]
+    # features = downsample_signal(features[0], 0.01666666666667/0.01)
     print(features.shape)
     np.save(features_file,features)
     window = signal.hamming(ceil(constants.HUMAN_DELTA/opt.step_size))

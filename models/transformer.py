@@ -11,13 +11,15 @@ class PositionalEncoding(nn.Module):
 
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        pe[:, 0::2] = torch.sin(position * div_term)
-        pe[:, 1::2] = torch.cos(position * div_term)
+        div_term1 = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        div_term2 = torch.exp(torch.arange(0, (d_model//2)*2, 2).float() * (-math.log(10000.0) / d_model))
+        pe[:, 0::2] = torch.sin(position * div_term1)
+        pe[:, 1::2] = torch.cos(position * div_term2)
         pe = pe.unsqueeze(0).transpose(0, 1)
         self.register_buffer('pe', pe)
 
     def forward(self, x):
+        # print(x.shape)
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
@@ -28,16 +30,18 @@ class TransformerCausalModel(nn.Module):
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(dinp, dropout)
-        encoder_layers = TransformerEncoderLayer(dinp, nhead, dhid, dropout)
+        self.encoder1 = nn.Linear(dinp, dhid)
+        encoder_layers = TransformerEncoderLayer(dhid, nhead, dhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         # self.encoder = nn.Embedding(ntoken, dinp)
         self.dinp = dinp
-        self.decoder = nn.Linear(dinp, dout)
+        self.decoder = nn.Linear(dhid, dout)
 
         self.init_weights()
 
-    def generate_square_subsequent_mask(self, sz):
+    def generate_square_subsequent_mask(self, sz, prefix_length = 1):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
+        mask[:,:prefix_length] = 1
         mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
         return mask
 
@@ -51,6 +55,7 @@ class TransformerCausalModel(nn.Module):
         # src = self.encoder(src) * math.sqrt(self.dinp)
         src *= math.sqrt(self.dinp)
         src = self.pos_encoder(src)
+        src = self.encoder1(src)
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
         return output
