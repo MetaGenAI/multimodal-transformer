@@ -94,13 +94,13 @@ class TransformerModel(BaseModel):
         self.module_names = []
         for i, mod in enumerate(input_mods):
             #net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, opt.nlayers, opt.dropout)
-            net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, 2, opt.dropout)
+            net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, 2, opt.dropout).to(self.device)
             name = "_input_"+mod
             setattr(self,"net"+name, net)
             self.input_mod_nets.append(net)
             self.module_names.append(name)
         for i, mod in enumerate(output_mods):
-            net = TransformerCausalModel(douts[i], opt.dhid, opt.nhead, opt.dhid, opt.nlayers, opt.dropout)
+            net = TransformerCausalModel(douts[i], opt.dhid, opt.nhead, opt.dhid, opt.nlayers, opt.dropout).to(self.device)
             name = "_output_"+mod
             setattr(self,"net"+name, net)
             self.output_mod_nets.append(net)
@@ -163,19 +163,19 @@ class TransformerModel(BaseModel):
         # move multiple samples of the same song to the second dimension and the reshape to batch dimension
         # input_ = data['input']
         # target_ = data['target']
-        self.input = []
-        self.target = []
+        self.inputs = []
+        self.targets = []
         for i,mod in enumerate(self.input_mods):
             input_ = data["in_"+mod]
             input_shape = input_.shape
             # It's coming as 0 batch dimension, 1 window dimension, 2 input channel dimension, 3 time dimension
             input_ = input_.reshape((input_shape[0]*input_shape[1], input_shape[2], input_shape[3])).permute(2,0,1).to(self.device)
-            self.input.append(input_)
+            self.inputs.append(input_)
         for i,mod in enumerate(self.output_mods):
             target_ = data["out_"+mod]
             target_shape = target_.shape
             target_ = target_.reshape((target_shape[0]*target_shape[1], target_shape[2], target_shape[3])).permute(2,0,1).to(self.device)
-            self.target.append(target_)
+            self.targets.append(target_)
         # feature_sizes = data['feature_sizes']
 
     def forward(self):
@@ -183,103 +183,59 @@ class TransformerModel(BaseModel):
         input_begin_indices = {}
         j=0
         for i, mod in enumerate(self.input_mods):
-            latents.append(self.input_mod_nets[i].forward(self.input[i],self.src_masks[i]))
+            latents.append(self.input_mod_nets[i].forward(self.inputs[i],self.src_masks[i]))
             input_begin_indices[mod] = j
             j+=self.input_lengths[i]
 
         latent = torch.cat(latents)
         self.loss_mse = 0
+        self.outputs = []
         for i, mod in enumerate(self.output_mods):
             inp_index = self.input_mods.index(mod)
             j = input_begin_indices[mod]
             output_begin_index = j+self.input_lengths[inp_index]-self.predicted_inputs[inp_index]
             output = self.output_mod_nets[i].forward(latent,self.output_mask)[output_begin_index:output_begin_index+self.output_lengths[i]]
-            self.loss_mse += self.criterion(output,self.target[i])
+            self.outputs.append(output)
+            self.loss_mse += self.criterion(output,self.targets[i])
 
         self.metric_mse = self.loss_mse
 
-    def generate(self, features, temperature, mod_sizes = {}, predicted_mods = [], use_beam_search=False):
+    def generate(self, features):
         opt = self.opt
 
-        features = torch.from_numpy(features)
+        inputs_ = []
+        for i,mod in enumerate(self.input_mods):
+            input_ = features["in_"+mod]
+            input_ = torch.from_numpy(input_)
+            input_shape = input_.shape
+            # It's coming as 0 batch dimension, 1 window dimension, 2 input channel dimension, 3 time dimension
+            input_ = input_.reshape((input_shape[0]*input_shape[1], input_shape[2], input_shape[3])).permute(2,0,1).to(self.device)
+            inputs_.append(input_)
 
-
-        input_length = self.opt.input_seq_len
-        output_length = self.opt.output_seq_len
-        time_offset = self.opt.output_time_offset
-        input_mods = self.opt.input_modalities.split(",")
-        output_mods = self.opt.output_modalities.split(",")
-
-        input_features = None
-        output_features = None
-
-        x = features
-
-        # we pad the song features with zeros to start generating from the beginning
-        assert len(x.shape) == 2
-        sequence_length = x.shape[1]
-        # x = np.concatenate((np.zeros(( x.shape[0],max(0,time_offset) )),x),1)
-        # # we also pad at the end to allow generation to be of the same length of sequence
-        # x = np.concatenate((x,np.zeros(( x.shape[0],max(0,input_length-(time_offset)) ))),1)
-
-        # 0 batch dimension, 1 input channel dimension, 2 time dimension
-        # -> 0 time dimension, 1 batch dimenison, 2 channel dimension
-        x = x.unsqueeze(0).permute(2,0,1).to(self.device)
-
-        input_seq = x[:opt.input_seq_len].clone()
-        # print(input_seq.shape)
-
+        self.inputs = []
+        for i,mod in enumerate(self.input_mods):
+            self.inputs[i].append(inputs_[i][self.input_time_offsets[i]:self.input_time_offsets[i]+self.input_lengths[i]])
         output_seq = None
-        #self.eval()
-        out_mod_indices = {}
-        in_mod_indices = {}
-        i=0
-        for mod in input_mods:
-            in_mod_indices[mod] = i
-            dmod = mod_sizes[mod]
-            i += dmod
-        i=0
-        for mod in output_mods:
-            out_mod_indices[mod] = i
-            dmod = mod_sizes[mod]
-            i += dmod
 
         with torch.no_grad():
             for t in range(sequence_length-input_length-1):
             # for t in range(sequence_length):
-                # time.sleep(1)
                 print(t)
-                next_prediction = self.net.forward(input_seq.float(),self.src_mask)[self.opt.prefix_length:self.opt.prefix_length+1].detach()
-                #indices = np.random.choice(range(0,sequence_length-max(input_length,time_offset+output_length)),size=10,replace=True)
-                #input_windows = [x[i:i+input_length] for i in indices]
-                #next_prediction = self.net.forward(torch.cat([input_seq]+input_windows,1).float(),self.src_mask)[self.opt.prefix_length:self.opt.prefix_length+1,:1].detach()
-
-                #next_prediction = self.net.forward(input_seq.float(),self.src_mask).detach()
-                #input_temp=x.clone()
-                #next_prediction = self.net.forward(input_temp[t:t+opt.input_seq_len].float(),self.src_mask).detach()
+                self.forward()
                 if t == 0:
-                    output_seq = next_prediction
+                    output_seq = self.output[:1]
                 else:
-                    output_seq = torch.cat([output_seq, next_prediction])
+                    output_seq = torch.cat([output_seq, self.output[:1]])
                     #output_seq = torch.cat([output_seq, x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,:219]])
                 if t < sequence_length-1:
-                    for mod in input_mods:
-                        dmod = mod_sizes[mod]
-                        i = in_mod_indices[mod]
-                        if mod in predicted_mods:
-                            j = out_mod_indices[mod]
-                            #print(j)
-                            #input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],next_prediction[:,:,j:j+dmod]],0)
-                            input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
-                            #print(torch.mean((x[t+opt.prefix_length+1:t+opt.prefix_length+output_length+1,:,i:i+dmod]-next_prediction[self.opt.prefix_length:,:,j:j+dmod])**2))
-                            #print(torch.mean((x[t+opt.prefix_length+1:t+opt.prefix_length+output_length+1,:,i:i+dmod]-next_prediction[self.opt.prefix_length:,:,j:j+dmod])**2))
-                            print(torch.mean((x[t+opt.prefix_length+1:t+opt.prefix_length+1+1,:,i:i+dmod]-next_prediction[:,:,j:j+dmod])**2))
-                            #print(x[0,0,0])
-                            #print(output_length)
-                            #print(x[t+opt.prefix_length+1:t+opt.prefix_length+output_length+1,:,i:i+dmod])
-                            #print(next_prediction[self.opt.prefix_length:,:,j:j+dmod])
+                    for i,mod in enumerate(self.input_mods):
+                        j = self.out_mods.index(mod)
+                        if self.predicted_inputs[i] > 0:
+                            self.inputs[i] = torch.cat([self.inputs[i][1:],self.outputs[j][:1]],0)
+                            # input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
+                            print(torch.mean((self.inputs[i][t+opt.input_time_offsets[i]+1:t+opt.input_time_offsets+1+1]-self.outputs[j][:1])**2))
                         else:
-                            input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
+                            self.inputs[i] = torch.cat([self.inputs[i][1:],inputs_[self.input_time_offsets[i]+self.input_lengths[i]+t+1:self.input_time_offsets[i]+self.input_lengths[i]+t+2]],0)
 
                 # torch.cuda.empty_cache()
 
