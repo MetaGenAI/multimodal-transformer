@@ -84,7 +84,7 @@ model.load_networks(checkpoint)
 
 seq_id="gLH_sBM_cAll_d16_mLH1_ch04"
 
-sound_features = np.load("data/features/"+seq_id+".mp3_multi_mel_80.npy_ddc_hidden.npy")
+sound_features = np.load("data/features/"+seq_id+".mp3_multi_mel_80.mp3_mel_ddcpca.npy")
 #sound_features = np.load("lou_bega_mambolovania_-250249188128876949.mp3_multi_mel_80.npy_ddc_hidden.npy")
 motion_features = np.load("data/features/"+seq_id+".pkl_joint_angles_mats.npy")
 
@@ -93,9 +93,12 @@ motion_features = motion_features[:1024]
 
 #motion_features = np.zeros((sound_features.shape[0],219))
 
-features = np.concatenate([motion_features,sound_features],1)
-features = features.transpose(1,0)
+# features = np.concatenate([motion_features,sound_features],1)
+# features = features.transpose(1,0)
 # print(features.shape)
+features = {}
+features["pkl_joint_angles_mats"] = np.expand_dims(motion_features,1)
+features["mp3_mel_ddcpca"] = np.expand_dims(sound_features,1)
 
 predicted_modes = model.generate(features, 1.0, mod_sizes = {"pkl_joint_angles_mats":219, "mp3_multi_mel_80.npy_ddc_hidden":512}, predicted_mods = ["pkl_joint_angles_mats"], use_beam_search=False)
 

@@ -24,7 +24,7 @@ $py scripts/training/train.py --data_dir=./data --dataset_name=$dataset --model=
     --nhead=10 \
     --dhid=800 \
     --val_epoch_freq=0 \
-    --gpu_ids=0 \
+    --tpu_ids=0 \
     --workers=4 \
     --dropout=0 \
     --continue_train \

@@ -75,6 +75,8 @@ pca = decomposition.PCA(n_components=512)
 x = pca.fit_transform(audio_feats)
 x.shape
 
+pca.transform(x[:5])
+
 plt.matshow(x[100:200,:2])
 
 audio_feats.shape

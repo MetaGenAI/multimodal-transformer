@@ -45,6 +45,7 @@ class BaseOptions:
         parser.add_argument('--weight_decay', default=5e-4, type=float)
         parser.add_argument('--loss_weight', default=None)
         parser.add_argument('--gpu_ids', default='-1', type=str, help='gpu ids (comma separated numbers - e.g. 1,2,3), =-1 for cpu use')
+        parser.add_argument('--tpu_ids', default='-1', type=str, help='tpu ids (comma separated numbers - e.g. 1,2,3), =-1 for gpu/cpu use')
         parser.add_argument('--workers', default=4, type=int, help='the number of workers to load the data')
         parser.add_argument('--experiment_name', default="experiment_name", type=str)
         parser.add_argument('--checkpoints_dir', default="../../scripts/training", type=str, help='checkpoint folder')
