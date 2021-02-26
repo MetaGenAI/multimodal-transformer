@@ -9,9 +9,9 @@ model=transformer
 #exp=aistpp_big
 exp=aistpp_212_mfcc
 
-$py scripts/training/train.py --data_dir=./data --dataset_name=$dataset --model=$model --batch_size=20 --num_windows=2 --nepoch=100 --nepoch_decay=500 \
+$py scripts/training/train.py --data_dir=./data --dataset_name=$dataset --model=$model --batch_size=20 --num_windows=2 --nepoch=500 --nepoch_decay=500 \
     --print_freq=10 --experiment_name=$exp --save_by_iter --save_latest_freq=5000 --checkpoints_dir scripts/training\
-    --lr=0.0001 \
+    --learning_rate=0.000005 \
     --dins="219,102" \
     --douts="219" \
     --input_modalities="pkl_joint_angles_mats,mp3_mel_ddcpca" \
@@ -27,5 +27,5 @@ $py scripts/training/train.py --data_dir=./data --dataset_name=$dataset --model=
     --gpu_ids=0 \
     --workers=4 \
     --dropout=0 \
-    #--continue_train \
-    #--load_iter=30000 \
+    --continue_train \
+    --load_iter=710000 \

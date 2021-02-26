@@ -65,7 +65,7 @@ class MultimodalDataset(BaseDataset):
             file_too_short = False
             for i, mod in enumerate(input_mods):
                 feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
-                print(feature_file)
+                #print(feature_file)
                 try:
                     features = np.load(feature_file)
                     length = features.shape[0]

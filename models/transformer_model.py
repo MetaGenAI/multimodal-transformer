@@ -137,9 +137,10 @@ class TransformerModel(BaseModel):
 
         self.criterion = nn.MSELoss()
 
+        print(opt.learning_rate)
         self.optimizers = [torch.optim.Adam([
             {'params': sum([[param for name, param in net.named_parameters() if name[-4:] == 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
-             'lr': 2 * opt.learning_rate},  # bias parameters change quicker - no weight decay is applied
+             'lr': 2 * opt.learning_rate },  # bias parameters change quicker - no weight decay is applied
             {'params': sum([[param for name, param in net.named_parameters() if name[-4:] != 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
              'lr': opt.learning_rate, 'weight_decay': opt.weight_decay}  # filter parameters have weight decay
         ])]
