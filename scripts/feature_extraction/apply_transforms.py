@@ -16,12 +16,12 @@ if not os.path.isdir(DATA_DIR):
 if not os.path.isdir(EXTRACT_DIR):
     os.mkdir(EXTRACT_DIR)
 sys.path.append(ROOT_DIR)
-from feature_extraction import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
-from scripts.feature_extraction.utils import distribute_tasks
+from audio_feature_utils import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
+from utils import distribute_tasks
 
 parser = argparse.ArgumentParser(description="Preprocess songs data")
 
-parser.add_argument("features_folder", type=str, help="features path")
+parser.add_argument("data_path", type=str, help="features path")
 parser.add_argument("--feature_name", metavar='', type=str, default="mel", help="coma separated list of names of features to combine")
 parser.add_argument("--transform_name", metavar='', type=str, default="scaler", help="pca_transform,scaler")
 parser.add_argument("--pca_dims", metavar='', type=int, default=2, help="number of pca dimensions to keep, if applying pca transform")
@@ -40,7 +40,6 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 print(rank)
-print("creating {} of size {}".format(feature_name, feature_size))
 
 #assuming mp3 for now. TODO: generalize
 candidate_files = sorted(data_path.glob('**/*'+feature_name+'.npy'), key=lambda path: path.parent.__str__())
@@ -62,4 +61,4 @@ for i in tasks:
         features = transform.transform(features)
         if transform_name == "pca_transform":
             features = features[:,:pca_dims]
-        np.save(new_features_file,features)
+        np.save(new_feature_file,features)

@@ -15,8 +15,8 @@ if not os.path.isdir(DATA_DIR):
 if not os.path.isdir(EXTRACT_DIR):
     os.mkdir(EXTRACT_DIR)
 sys.path.append(ROOT_DIR)
-from feature_extraction import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
-from scripts.feature_extraction.utils import distribute_tasks
+from audio_feature_utils import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
+from utils import distribute_tasks
 
 parser = argparse.ArgumentParser(description="Preprocess songs data")
 
@@ -37,7 +37,6 @@ comm = MPI.COMM_WORLD
 rank = comm.Get_rank()
 size = comm.Get_size()
 print(rank)
-print("creating {} of size {}".format(feature_name, feature_size))
 
 candidate_files = [x[:-1] for x in open(base_filenames_file,"r").readlines()]
 tasks = distribute_tasks(candidate_files,rank,size)
@@ -58,5 +57,10 @@ for i in tasks:
                     features = features[:-1]
                 if len(feature) > len(features):
                     feature = feature[:-1]
-                features = np.concatenate([features,feature],1)
-        np.save(new_features_file,features)
+                if len(feature.shape) == 2:
+                    features = np.concatenate([features,feature],1)
+                elif len(feature.shape) == 1:
+                    features = np.concatenate([features,np.expand_dims(feature,1)],1)
+                else:
+                    raise NotImplementedError("Only supporting features of rank 1")
+        np.save(new_feature_file,features)
