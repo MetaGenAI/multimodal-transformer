@@ -64,7 +64,7 @@ class MultimodalDataset(BaseDataset):
         for base_filename in temp_base_filenames:
             file_too_short = False
             for i, mod in enumerate(input_mods):
-                feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
+                feature_file = data_path.joinpath(base_filename+"."+mod+".npy")
                 #print(feature_file)
                 try:
                     features = np.load(feature_file)
@@ -85,7 +85,7 @@ class MultimodalDataset(BaseDataset):
             if file_too_short: continue
 
             for i, mod in enumerate(output_mods):
-                feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
+                feature_file = data_path.joinpath(base_filename+"."+mod+".npy")
                 try:
                     features = np.load(feature_file)
                     length = features.shape[0]
@@ -103,7 +103,7 @@ class MultimodalDataset(BaseDataset):
             if file_too_short: continue
 
             for mod in input_mods:
-                feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
+                feature_file = data_path.joinpath(base_filename+"."+mod+".npy")
                 self.input_features[mod][base_filename] = feature_file
 
             #shortest_length = 99999999999
@@ -121,7 +121,7 @@ class MultimodalDataset(BaseDataset):
             #        assert length == length_0
 
             for mod in output_mods:
-                feature_file = data_path.joinpath("features").joinpath(base_filename+"."+mod+".npy")
+                feature_file = data_path.joinpath(base_filename+"."+mod+".npy")
                 self.output_features[mod][base_filename] = feature_file
 
             #shortest_length = 99999999999
