@@ -15,9 +15,10 @@ if not os.path.isdir(DATA_DIR):
 if not os.path.isdir(EXTRACT_DIR):
     os.mkdir(EXTRACT_DIR)
 sys.path.append(ROOT_DIR)
-from feature_extraction import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
+from audio_feature_utils import extract_features_hybrid, extract_features_mel, extract_features_multi_mel, extract_features_envelope
+from utils import distribute_tasks
 
-parser = argparse.ArgumentParser(description="Preprocess songs data")
+parser = argparse.ArgumentParser(description="Preprocess audio data")
 
 parser.add_argument("data_path", type=str, help="Directory contining Beat Saber level folders")
 parser.add_argument("--feature_name", metavar='', type=str, default="mel", help="mel, chroma, multi_mel")
@@ -25,6 +26,7 @@ parser.add_argument("--feature_size", metavar='', type=int, default=100)
 parser.add_argument("--step_size", metavar='', type=float, default=0.01666666666)
 parser.add_argument("--sampling_rate", metavar='', type=float, default=96000)
 parser.add_argument("--replace_existing", action="store_true")
+parser.add_argument("--notranspose", action="store_true")
 
 args = parser.parse_args()
 
@@ -40,13 +42,9 @@ size = comm.Get_size()
 print(rank)
 print("creating {} of size {}".format(feature_name, feature_size))
 
-#assuming mp3 for now. TODO: generalize
+#assuming mp3 for now.
 candidate_audio_files = sorted(data_path.glob('**/*.mp3'), key=lambda path: path.parent.__str__())
-num_tasks = len(candidate_audio_files)
-num_tasks_per_job = num_tasks//size
-tasks = list(range(rank*num_tasks_per_job,(rank+1)*num_tasks_per_job))
-if rank < num_tasks%size:
-    tasks.append(size*num_tasks_per_job+rank)
+tasks = distribute_tasks(candidate_audio_files,rank,size)
 
 for i in tasks:
     path = candidate_audio_files[i]
@@ -67,9 +65,13 @@ for i in tasks:
         if feature_name == "chroma":
             features = extract_features_hybrid(y_wav,sr,hop)
         elif feature_name == "mel":
-            features = extract_features_mel(y_wav,sr,hop,mel_dim=feature_size)[:,1:]
-            #print(features.shape)
+            features = extract_features_mel(y_wav,sr,hop,mel_dim=feature_size)
+        elif feature_name == "envelope":
+            features = extract_features_envelope(y_wav,sr,hop,mel_dim=feature_size)
         elif feature_name == "multi_mel":
             features = extract_features_multi_mel(y_wav, sr=sampling_rate, hop=hop, nffts=[1024,2048,4096], mel_dim=feature_size)
 
-        np.save(features_file,features)
+        if notranspose:
+            np.save(features_file,features)
+        else:
+            np.save(features_file,features.transpose(1,0))

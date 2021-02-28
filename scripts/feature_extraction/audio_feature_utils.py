@@ -39,6 +39,10 @@ def extract_features_mel(y, sr, hop,mel_dim=100):
     features = librosa.power_to_db(mel, ref=np.max)
     return features
 
+def extract_features_envelope(y, sr, hop,mel_dim=100):
+    envelope = librosa.onset.onset_strength(y=y,hop_length=hop, n_mels=mel_dim)
+    return envelope
+
 def extract_features_chroma(y,sr, state_times):
     #hop = #int((44100 * 60 * beat_discretization) / bpm) Hop length must be a multiple of 2^6
     chromagram = librosa.feature.chroma_cqt(y=y, sr=sr, C=None, fmin=None,

@@ -23,7 +23,7 @@ sys.path.append(THIS_DIR)
 
 import models.constants as constants
 from models import create_model
-from feature_extraction import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
+from scripts.feature_extraction.utils import distribute_tasks,ResampleLinear1D
 
 parser = argparse.ArgumentParser(description='Get DDC features from song features')
 parser.add_argument("data_path", type=str, help="Directory contining Beat Saber level folders")
@@ -33,10 +33,6 @@ parser.add_argument('--peak_threshold', type=float, default=0.0148)
 parser.add_argument('--checkpoint', type=str, default="latest")
 parser.add_argument('--temperature', type=float, default=1.00)
 parser.add_argument('--cuda', action="store_true")
-
-# parser.add_argument("--feature_name", metavar='', type=str, default="mel", help="mel, chroma, multi_mel")
-# parser.add_argument("--feature_size", metavar='', type=int, default=100)
-# parser.add_argument("--sampling_rate", metavar='', type=float, default=44100.0)
 parser.add_argument("--step_size", metavar='', type=float, default=0.01666666666)
 parser.add_argument("--replace_existing", action="store_true")
 
@@ -94,42 +90,9 @@ receptive_field = 1
 checkpoint = "iter_"+checkpoint
 model.load_networks(checkpoint)
 
-from scipy.signal import resample
-from scipy.interpolate import interp1d
-
-def ResampleLinear1D(original, targetLen):
-    index_arr = np.linspace(0, len(original)-1, num=targetLen, dtype=np.float)
-    index_floor = np.array(index_arr, dtype=np.int) #Round down
-    index_ceil = index_floor + 1
-    index_rem = index_arr - index_floor #Remain
-
-    val1 = original[index_floor]
-    val2 = original[index_ceil % len(original)]
-    interp = val1 * np.expand_dims(np.expand_dims(1.0-index_rem,1),1) + val2 * np.expand_dims(np.expand_dims(index_rem,1),1)
-    assert(len(interp) == targetLen)
-    return interp
-
-from math import floor
-
-def downsample_signal(original,ratio):
-    # ratio is the ratio between the time step in the original and in the new one (so it should be > 1 for downsampling)
-    old_indices = np.arange(len(original), dtype=np.int32)
-    new_indices = (old_indices // ratio).astype(np.int32)
-    M = np.zeros((int(len(original)//ratio)+1,len(original)), dtype=np.float32)
-    M[new_indices,old_indices] = 1
-    w = np.sum(M,1)
-    w = np.expand_dims(w,1)
-    print(M.shape)
-    return np.matmul(M,original)/w
-
-
 #assuming mp3 for now. TODO: generalize
 candidate_feature_files = sorted(data_path.glob('**/*mp3_multi_mel_80.npy'), key=lambda path: path.parent.__str__())
-num_tasks = len(candidate_feature_files)
-num_tasks_per_job = num_tasks//size
-tasks = list(range(rank*num_tasks_per_job,(rank+1)*num_tasks_per_job))
-if rank < num_tasks%size:
-    tasks.append(size*num_tasks_per_job+rank)
+tasks = distribute_tasks(candidate_feature_files,rank,size)
 
 for i in tasks:
     path = candidate_feature_files[i]
@@ -147,7 +110,8 @@ for i in tasks:
     features, peak_probs = model.generate_features(features)
     peak_probs = peak_probs[0,:,-1].cpu().detach().numpy()
     features = features.cpu().detach().numpy()
-    features = np.transpose(ResampleLinear1D(np.transpose(features,(1,0,2)),int(np.floor(features.shape[1]*0.01/0.016666666))),(1,0,2))[0,1:,:]
+    features = features[0]
+    features = ResampleLinear1D(features,int(np.floor(features.shape[0]*0.01/0.016666666)))
     # features = downsample_signal(features[0], 0.01666666666667/0.01)
     print(features.shape)
     np.save(features_file,features)
