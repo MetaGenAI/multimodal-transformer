@@ -83,13 +83,19 @@ model.load_networks(checkpoint)
 #%%
 
 seq_id="gLH_sBM_cAll_d16_mLH1_ch04"
+#seq_id="gWA_sBM_cAll_d26_mWA1_ch10"
 
-sound_features = np.load("data/features/"+seq_id+".mp3_multi_mel_80.mp3_mel_ddcpca.npy")
+sf = np.load("data/features/"+seq_id+".mp3_mel_ddcpca.npy")
 #sound_features = np.load("lou_bega_mambolovania_-250249188128876949.mp3_multi_mel_80.npy_ddc_hidden.npy")
-motion_features = np.load("data/features/"+seq_id+".pkl_joint_angles_mats.npy")
+mf = np.load("data/features/"+seq_id+".pkl_joint_angles_mats.npy")
+mf_mean=np.mean(mf,0,keepdims=True)
+mf_std = np.std(mf,0,keepdims=True)+1e-5
+sf = (sf-np.mean(sf,0,keepdims=True))/(np.std(sf,0,keepdims=True)+1e-5)
+mf = (mf-mf_mean)/(mf_std)
 
-sound_features = sound_features[:1024]
-motion_features = motion_features[:1024]
+
+sf = sf[:1024]
+mf = mf[:1024]
 
 #motion_features = np.zeros((sound_features.shape[0],219))
 
@@ -97,12 +103,14 @@ motion_features = motion_features[:1024]
 # features = features.transpose(1,0)
 # print(features.shape)
 features = {}
-features["pkl_joint_angles_mats"] = np.expand_dims(motion_features,1)
-features["mp3_mel_ddcpca"] = np.expand_dims(sound_features,1)
+features["in_pkl_joint_angles_mats"] = np.expand_dims(np.expand_dims(mf.transpose(1,0),0),0)
+features["in_mp3_mel_ddcpca"] = np.expand_dims(np.expand_dims(sf.transpose(1,0),0),0)
 
-predicted_modes = model.generate(features, 1.0, mod_sizes = {"pkl_joint_angles_mats":219, "mp3_multi_mel_80.npy_ddc_hidden":512}, predicted_mods = ["pkl_joint_angles_mats"], use_beam_search=False)
+predicted_modes = model.generate(features)
+
+predicted_modes = (predicted_modes[0].cpu().numpy()*mf_std + mf_mean)
 
 print(predicted_modes)
 
-np.save(seq_id+".pkl_joint_angles_mats.generated.test.npz",predicted_modes.cpu().numpy())
+np.save(seq_id+".pkl_joint_angles_mats.generated.test.npz",predicted_modes)
 #np.save("mambolovania",predicted_modes.cpu().numpy())
