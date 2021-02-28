@@ -189,16 +189,19 @@ class MultimodalDataset(BaseDataset):
             output_feature = np.load(self.output_features[mod][base_filename])
             output_features.append(output_feature)
 
-        # print(input_features[0].shape)
         x = [input_feature.transpose(1,0) for input_feature in input_features]
         y = [output_feature.transpose(1,0) for output_feature in output_features]
+        # normalization of individual features for the sequence
+        #print(np.std(x[0],-1,keepdims=True))
+        x = [(xx-np.mean(xx,-1,keepdims=True))/(np.std(xx,-1,keepdims=True)+1e-5) for xx in x]
+        y = [(yy-np.mean(yy,-1,keepdims=True))/(np.std(yy,-1,keepdims=True)+1e-5) for yy in y]
 
-        # we pad the song features with zeros to imitate during training what happens during generation
-        x = [np.concatenate((np.zeros(( xx.shape[0],max(0,max(output_time_offsets)) )),xx),1) for xx in x]
-        y = [np.concatenate((np.zeros(( yy.shape[0],max(0,max(output_time_offsets)) )),yy),1) for yy in y]
-        # we also pad at the end to allow generation to be of the same length of sequence, by padding an amount corresponding to time_offset
-        x = [np.concatenate((xx,np.zeros(( xx.shape[0],max(0,max(input_lengths)+max(input_time_offsets)-(min(output_time_offsets)+min(output_lengths)-1)) ))),1) for xx in x]
-        y = [np.concatenate((yy,np.zeros(( yy.shape[0],max(0,max(input_lengths)+max(input_time_offsets)-(min(output_time_offsets)+min(output_lengths)-1)) ))),1) for yy in y]
+        ## we pad the song features with zeros to imitate during training what happens during generation
+        #x = [np.concatenate((np.zeros(( xx.shape[0],max(0,max(output_time_offsets)) )),xx),1) for xx in x]
+        #y = [np.concatenate((np.zeros(( yy.shape[0],max(0,max(output_time_offsets)) )),yy),1) for yy in y]
+        ## we also pad at the end to allow generation to be of the same length of sequence, by padding an amount corresponding to time_offset
+        #x = [np.concatenate((xx,np.zeros(( xx.shape[0],max(0,max(input_lengths)+max(input_time_offsets)-(min(output_time_offsets)+min(output_lengths)-1)) ))),1) for xx in x]
+        #y = [np.concatenate((yy,np.zeros(( yy.shape[0],max(0,max(input_lengths)+max(input_time_offsets)-(min(output_time_offsets)+min(output_lengths)-1)) ))),1) for yy in y]
 
         ## WINDOWS ##
         # sample indices at which we will get opt.num_windows windows of the sequence to feed as inputs
@@ -208,11 +211,9 @@ class MultimodalDataset(BaseDataset):
 
         ## CONSTRUCT TENSOR OF INPUT FEATURES ##
         input_windows = [torch.tensor([xx[:,i+input_time_offsets[j]:i+input_time_offsets[j]+input_lengths[j]] for i in indices]).float() for j,xx in enumerate(x)]
-        # input_windows = (input_windows - input_windows.mean())/torch.abs(input_windows).max()
 
         ## CONSTRUCT TENSOR OF OUTPUT FEATURES ##
         output_windows = [torch.tensor([yy[:,i+output_time_offsets[j]:i+output_time_offsets[j]+output_lengths[j]] for i in indices]).float() for j,yy in enumerate(y)]
-        # output_windows = (output_windows - output_windows.mean())/torch.abs(output_windows).max()
 
         # print(input_windows.shape)
 

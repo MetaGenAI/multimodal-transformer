@@ -73,19 +73,19 @@ class TransformerModel(BaseModel):
         self.input_time_offsets = input_time_offsets = [int(x) for x in self.opt.input_time_offsets.split(",")]
         if len(output_time_offsets) < len(output_mods):
             if len(output_time_offsets) == 1:
-                output_time_offsets = output_time_offsets*len(output_mods)
+                self.output_time_offsets = output_time_offsets = output_time_offsets*len(output_mods)
             else:
                 raise Exception("number of output_time_offsets doesnt match number of output_mods")
 
         if len(input_time_offsets) < len(input_mods):
             if len(input_time_offsets) == 1:
-                input_time_offsets = input_time_offsets*len(input_mods)
+                self.input_time_offsets = input_time_offsets = input_time_offsets*len(input_mods)
             else:
                 raise Exception("number of input_time_offsets doesnt match number of input_mods")
 
         if len(predicted_inputs) < len(input_mods):
             if len(predicted_inputs) == 1:
-                predicted_inputs = predicted_inputs*len(input_mods)
+                self.predicted_inputs = predicted_inputs = predicted_inputs*len(input_mods)
             else:
                 raise Exception("number of predicted_inputs doesnt match number of input_mods")
 
@@ -106,6 +106,29 @@ class TransformerModel(BaseModel):
             self.output_mod_nets.append(net)
             self.module_names.append(name)
 
+        self.generate_masks()
+
+        self.criterion = nn.MSELoss()
+
+        print(opt.learning_rate)
+        self.optimizers = [torch.optim.Adam([
+            {'params': sum([[param for name, param in net.named_parameters() if name[-4:] == 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
+             'lr': 2 * opt.learning_rate },  # bias parameters change quicker - no weight decay is applied
+            {'params': sum([[param for name, param in net.named_parameters() if name[-4:] != 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
+             'lr': opt.learning_rate, 'weight_decay': opt.weight_decay}  # filter parameters have weight decay
+        ])]
+        self.loss_mse = None
+
+    def generate_masks(self):
+        input_mods = self.input_mods
+        output_mods = self.output_mods
+        dins = self.dins
+        douts = self.douts
+        input_lengths = self.input_lengths
+        predicted_inputs = self.predicted_inputs
+        output_lengths = self.output_lengths
+        output_time_offsets = self.output_time_offsets
+        input_time_offsets = self.input_time_offsets
         self.src_masks = []
         for i, mod in enumerate(input_mods):
             self.src_masks.append(self.input_mod_nets[i].generate_square_subsequent_mask(input_lengths[i], input_lengths[i]-predicted_inputs[i]).to(self.device))
@@ -135,16 +158,6 @@ class TransformerModel(BaseModel):
 
         self.output_mask = self.output_mask.to(self.device)
 
-        self.criterion = nn.MSELoss()
-
-        print(opt.learning_rate)
-        self.optimizers = [torch.optim.Adam([
-            {'params': sum([[param for name, param in net.named_parameters() if name[-4:] == 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
-             'lr': 2 * opt.learning_rate },  # bias parameters change quicker - no weight decay is applied
-            {'params': sum([[param for name, param in net.named_parameters() if name[-4:] != 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
-             'lr': opt.learning_rate, 'weight_decay': opt.weight_decay}  # filter parameters have weight decay
-        ])]
-        self.loss_mse = None
 
     def name(self):
         return "Transformer"
@@ -179,7 +192,7 @@ class TransformerModel(BaseModel):
             self.targets.append(target_)
         # feature_sizes = data['feature_sizes']
 
-    def forward(self):
+    def forward(self, calc_loss=True):
         latents = []
         input_begin_indices = {}
         j=0
@@ -197,7 +210,8 @@ class TransformerModel(BaseModel):
             output_begin_index = j+self.input_lengths[inp_index]-self.predicted_inputs[inp_index]
             output = self.output_mod_nets[i].forward(latent,self.output_mask)[output_begin_index:output_begin_index+self.output_lengths[i]]
             self.outputs.append(output)
-            self.loss_mse += self.criterion(output,self.targets[i])
+            if calc_loss:
+                self.loss_mse += self.criterion(output,self.targets[i])
 
         self.metric_mse = self.loss_mse
 
@@ -207,36 +221,59 @@ class TransformerModel(BaseModel):
         inputs_ = []
         for i,mod in enumerate(self.input_mods):
             input_ = features["in_"+mod]
-            input_ = torch.from_numpy(input_)
+            #print(input_)
+            input_ = torch.from_numpy(input_).float()
             input_shape = input_.shape
             # It's coming as 0 batch dimension, 1 window dimension, 2 input channel dimension, 3 time dimension
             input_ = input_.reshape((input_shape[0]*input_shape[1], input_shape[2], input_shape[3])).permute(2,0,1).to(self.device)
             inputs_.append(input_)
+            #if self.predicted_inputs[i]>0:
+            #    self.input_lengths[i] = self.input_lengths[i] - self.predicted_inputs[i] + 1
+            #    self.predicted_inputs[i] = 1
+
+        #self.generate_masks()
 
         self.inputs = []
+        input_tmp = []
         for i,mod in enumerate(self.input_mods):
-            self.inputs[i].append(inputs_[i][self.input_time_offsets[i]:self.input_time_offsets[i]+self.input_lengths[i]])
-        output_seq = None
+            input_tmp.append(inputs_[i].clone()[self.input_time_offsets[i]:self.input_time_offsets[i]+self.input_lengths[i]])
 
+        #self.eval()
+        output_seq = []
+        sequence_length = inputs_[0].shape[0]
         with torch.no_grad():
-            for t in range(sequence_length-input_length-1):
+            for t in range(sequence_length-max(self.input_lengths)-1):
             # for t in range(sequence_length):
                 print(t)
-                self.forward()
+                self.inputs = [x.clone() for x in input_tmp]
+                #for i,mod in enumerate(self.input_mods):
+                #    print(self.inputs[i])
+                self.forward(False)
                 if t == 0:
-                    output_seq = self.output[:1]
+                    for i,mod in enumerate(self.output_mods):
+                        output_seq.append(self.outputs[i][:1].detach().clone())
+                        #output_seq.append(inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda())
                 else:
-                    output_seq = torch.cat([output_seq, self.output[:1]])
+                    for i,mod in enumerate(self.output_mods):
+                        #output_seq[i] = torch.cat([output_seq[i], inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda()])
+                        output_seq[i] = torch.cat([output_seq[i], self.outputs[i][:1].detach().clone()])
+                        #print(self.outputs[i][:1])
+                        #print(inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda())
                     #output_seq = torch.cat([output_seq, x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,:219]])
                 if t < sequence_length-1:
                     for i,mod in enumerate(self.input_mods):
-                        j = self.out_mods.index(mod)
                         if self.predicted_inputs[i] > 0:
-                            self.inputs[i] = torch.cat([self.inputs[i][1:],self.outputs[j][:1]],0)
+                            j = self.output_mods.index(mod)
+                            #input_tmp[i] = torch.cat([input_tmp[i][1:],self.outputs[j][-1:].detach().clone()],0)
+                            input_tmp[i] = torch.cat([input_tmp[i][1:-self.predicted_inputs[i]+1],self.outputs[j].detach().clone()],0)
+                            #input_tmp[i] = torch.cat([input_tmp[i][1:],inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]],0)
+                            #print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+self.output_lengths[j]]-self.outputs[j].detach().clone())**2))
+                            print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+1]-self.outputs[j][:1].detach().clone())**2))
                             # input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
-                            print(torch.mean((self.inputs[i][t+opt.input_time_offsets[i]+1:t+opt.input_time_offsets+1+1]-self.outputs[j][:1])**2))
+                            #print(input_tmp[i][t+self.input_time_offsets[i]+self.input_lengths[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]+1+1])
+                            #print(input_tmp[i].shape)
                         else:
-                            self.inputs[i] = torch.cat([self.inputs[i][1:],inputs_[self.input_time_offsets[i]+self.input_lengths[i]+t+1:self.input_time_offsets[i]+self.input_lengths[i]+t+2]],0)
+                            input_tmp[i] = torch.cat([input_tmp[i][1:],inputs_[i][self.input_time_offsets[i]+self.input_lengths[i]+t:self.input_time_offsets[i]+self.input_lengths[i]+t+1]],0)
 
                 # torch.cuda.empty_cache()
 

@@ -2,8 +2,8 @@
 
 song_path=$1
 
-exp2=aistpp_short
-cpt2=210000
+exp2=aistpp_norm
+cpt2=1415000
 #cpt2=1200000
 #cpt2=1450000
 #exp2=test_block_selection
@@ -12,8 +12,9 @@ cpt2=210000
 
 py=python
 
-mkdir generated
+#mkdir generated
 
-$py scripts/generation/generate_stage2.py --cuda --song_path $song_path --experiment_name $exp2 --checkpoint $cpt2 \
-    --temperature 1.00 \
-    --use_beam_search \
+$py scripts/generation/generate_stage2.py --cuda --song_path . --experiment_name $exp2 --checkpoint $cpt2 \
+#$py scripts/generation/generate_stage2.py --cuda --song_path $song_path --experiment_name $exp2 --checkpoint $cpt2 \
+#    --temperature 1.00 \
+#    --use_beam_search \
