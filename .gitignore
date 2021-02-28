@@ -21,3 +21,4 @@ scripts/training/aistpp_212_mfcc/*
 scripts/training/aistpp_norm_backup/*
 scripts/training/aistpp_norm/*
 *.npy
+test_data/*

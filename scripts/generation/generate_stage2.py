@@ -82,20 +82,22 @@ model.load_networks(checkpoint)
 ''' GET SONG FEATURES for stage two '''
 #%%
 
-seq_id="gLH_sBM_cAll_d16_mLH1_ch04"
+# seq_id="gLH_sBM_cAll_d16_mLH1_ch04"
 #seq_id="gWA_sBM_cAll_d26_mWA1_ch10"
+seq_id="mambo"
 
-sf = np.load("data/features/"+seq_id+".mp3_mel_ddcpca.npy")
-#sound_features = np.load("lou_bega_mambolovania_-250249188128876949.mp3_multi_mel_80.npy_ddc_hidden.npy")
-mf = np.load("data/features/"+seq_id+".pkl_joint_angles_mats.npy")
-mf_mean=np.mean(mf,0,keepdims=True)
-mf_std = np.std(mf,0,keepdims=True)+1e-5
-sf = (sf-np.mean(sf,0,keepdims=True))/(np.std(sf,0,keepdims=True)+1e-5)
-mf = (mf-mf_mean)/(mf_std)
+# sf = np.load("data/features/"+seq_id+".mp3_mel_ddcpca.npy")
+sf = np.load("test_data/"+seq_id+".mp3_mel_ddcpca.npy")
+# mf = np.load("data/features/"+seq_id+".pkl_joint_angles_mats.npy")
+mf = np.load("test_data/"+seq_id+".pkl_joint_angles_mats.npy")
+# mf_mean=np.mean(mf,0,keepdims=True)
+# mf_std = np.std(mf,0,keepdims=True)+1e-5
+# sf = (sf-np.mean(sf,0,keepdims=True))/(np.std(sf,0,keepdims=True)+1e-5)
+# mf = (mf-mf_mean)/(mf_std)
 
 
-sf = sf[:1024]
-mf = mf[:1024]
+# sf = sf[:1024]
+# mf = mf[:1024]
 
 #motion_features = np.zeros((sound_features.shape[0],219))
 
@@ -106,9 +108,11 @@ features = {}
 features["in_pkl_joint_angles_mats"] = np.expand_dims(np.expand_dims(mf.transpose(1,0),0),0)
 features["in_mp3_mel_ddcpca"] = np.expand_dims(np.expand_dims(sf.transpose(1,0),0),0)
 
-predicted_modes = model.generate(features)
+predicted_modes = model.generate(features)[0]
 
-predicted_modes = (predicted_modes[0].cpu().numpy()*mf_std + mf_mean)
+# predicted_modes = (predicted_modes[0].cpu().numpy()*mf_std + mf_mean)
+transform = pickle.load(open("data/features"+'/'+'pkl_joint_angles_mats'+'_'+'scaler'+'.pkl', "rb"))
+predicted_modes = transform.inverse_transform(predicted_modes)
 
 print(predicted_modes)
 

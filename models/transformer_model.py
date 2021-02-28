@@ -147,13 +147,13 @@ class TransformerModel(BaseModel):
         input_indices = input_indices - 1
         input_indices = input_indices.long()
 
-
         self.output_mask = self.output_mod_nets[0].generate_square_subsequent_mask(sum(input_lengths), 0)
         self.output_mask = self.output_mask[input_indices.unsqueeze(0).T,input_indices.unsqueeze(0)]
         print(self.output_mask.shape)
         j=0
         for i, mod in enumerate(input_mods):
-            self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = 1
+            # self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = 0
+            self.output_mask[:,j:j+input_lengths[i]-predicted_inputs[i]] = 0
             j+=input_lengths[i]
 
         self.output_mask = self.output_mask.to(self.device)
@@ -240,7 +240,8 @@ class TransformerModel(BaseModel):
 
         #self.eval()
         output_seq = []
-        sequence_length = inputs_[0].shape[0]
+        # sequence_length = inputs_[0].shape[0]
+        sequence_length = inputs_[1].shape[0]
         with torch.no_grad():
             for t in range(sequence_length-max(self.input_lengths)-1):
             # for t in range(sequence_length):
@@ -266,9 +267,9 @@ class TransformerModel(BaseModel):
                             j = self.output_mods.index(mod)
                             #input_tmp[i] = torch.cat([input_tmp[i][1:],self.outputs[j][-1:].detach().clone()],0)
                             input_tmp[i] = torch.cat([input_tmp[i][1:-self.predicted_inputs[i]+1],self.outputs[j].detach().clone()],0)
+                            # print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+1]-self.outputs[j][:1].detach().clone())**2))
                             #input_tmp[i] = torch.cat([input_tmp[i][1:],inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]],0)
                             #print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+self.output_lengths[j]]-self.outputs[j].detach().clone())**2))
-                            print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+1]-self.outputs[j][:1].detach().clone())**2))
                             # input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
                             #print(input_tmp[i][t+self.input_time_offsets[i]+self.input_lengths[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]+1+1])
                             #print(input_tmp[i].shape)

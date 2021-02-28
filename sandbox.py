@@ -63,6 +63,8 @@ audio_feats = np.load("data/features/gHO_sBM_cAll_d19_mHO3_ch08.mp3_multi_mel_80
 audio_feats = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.mp3_mel_ddcpca.npy")
 motion_feats = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.pkl_joint_angles_mats.npy")
 
+
+
 Audio_feats.shape
 
 audio_feats.shape
@@ -95,3 +97,35 @@ mask[:3,:3]
 mask[:,:10] = 1
 plt.imshow(mask)
 mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+
+###########################
+#plotting masks hmm
+#mega hacky lel
+
+mask = np.load("d2d79782-ad83-4617-9211-5f46baf8a3b8.np.npy")
+mask[0][120:140]
+mask[0][:140]
+import torch
+
+maskt = torch.from_numpy(mask)
+
+ps = torch.nn.functional.softmax(maskt,dim=-1)
+ps[0]
+
+plt.matshow(mask[4])
+plt.matshow(mask[3])
+plt.matshow(mask[9])
+plt.matshow(mask[9][0:1])
+
+
+###########################
+#audio
+import librosa
+
+y_wav, sr = librosa.load("data/dev_audio/gBR_sBM_c01_d06_mBR5_ch10.mp3", sr=48000)
+y_wav
+envelope = librosa.onset.onset_strength(y=y_wav,hop_length=480)
+
+(y_wav.shape[0]/48000)/0.01
+
+envelope.shape

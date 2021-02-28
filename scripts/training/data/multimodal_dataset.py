@@ -177,7 +177,6 @@ class MultimodalDataset(BaseDataset):
         input_mods = self.opt.input_modalities.split(",")
         output_mods = self.opt.output_modalities.split(",")
 
-
         input_features = []
         output_features = []
 
@@ -191,10 +190,11 @@ class MultimodalDataset(BaseDataset):
 
         x = [input_feature.transpose(1,0) for input_feature in input_features]
         y = [output_feature.transpose(1,0) for output_feature in output_features]
+
         # normalization of individual features for the sequence
-        #print(np.std(x[0],-1,keepdims=True))
-        x = [(xx-np.mean(xx,-1,keepdims=True))/(np.std(xx,-1,keepdims=True)+1e-5) for xx in x]
-        y = [(yy-np.mean(yy,-1,keepdims=True))/(np.std(yy,-1,keepdims=True)+1e-5) for yy in y]
+        # not doing this any more as we are normalizing over all examples now
+        # x = [(xx-np.mean(xx,-1,keepdims=True))/(np.std(xx,-1,keepdims=True)+1e-5) for xx in x]
+        # y = [(yy-np.mean(yy,-1,keepdims=True))/(np.std(yy,-1,keepdims=True)+1e-5) for yy in y]
 
         ## we pad the song features with zeros to imitate during training what happens during generation
         #x = [np.concatenate((np.zeros(( xx.shape[0],max(0,max(output_time_offsets)) )),xx),1) for xx in x]

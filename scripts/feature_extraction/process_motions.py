@@ -17,9 +17,9 @@ if not os.path.isdir(DATA_DIR):
 if not os.path.isdir(EXTRACT_DIR):
     os.mkdir(EXTRACT_DIR)
 sys.path.append(ROOT_DIR)
-from scripts.feature_extraction.feature_extraction import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
+from utils import distribute_tasks
 
-parser = argparse.ArgumentParser(description="Preprocess songs data")
+parser = argparse.ArgumentParser(description="Preprocess motion data")
 
 parser.add_argument("data_path", type=str, help="Directory contining Beat Saber level folders")
 parser.add_argument("--replace_existing", action="store_true")
@@ -36,7 +36,6 @@ Tensor = NewType('Tensor', torch.Tensor)
 def rot_mat_to_euler(rot_mats):
     # Calculates rotation matrix to euler angles
     # Careful for extreme cases of eular angles like [0.0, pi, 0.0]
-
     sy = torch.sqrt(rot_mats[:, 0, 0] * rot_mats[:, 0, 0] +
                     rot_mats[:, 1, 0] * rot_mats[:, 1, 0])
     return torch.atan2(-rot_mats[:, 2, 0], sy)
@@ -100,28 +99,8 @@ rank = comm.Get_rank()
 size = comm.Get_size()
 print(rank)
 
-from scipy.signal import resample
-from scipy.interpolate import interp1d
-
-def ResampleLinear1D(original, targetLen):
-    index_arr = np.linspace(0, len(original)-1, num=targetLen, dtype=np.float)
-    index_floor = np.array(index_arr, dtype=np.int) #Round down
-    index_ceil = index_floor + 1
-    index_rem = index_arr - index_floor #Remain
-
-    val1 = original[index_floor]
-    val2 = original[index_ceil % len(original)]
-    interp = val1 * np.expand_dims(1.0-index_rem,1) + val2 * np.expand_dims(index_rem,1)
-    assert(len(interp) == targetLen)
-    return interp
-
-
 candidate_motion_files = sorted(data_path.glob('**/*.pkl'), key=lambda path: path.parent.__str__())
-num_tasks = len(candidate_motion_files)
-num_tasks_per_job = num_tasks//size
-tasks = list(range(rank*num_tasks_per_job,(rank+1)*num_tasks_per_job))
-if rank < num_tasks%size:
-    tasks.append(size*num_tasks_per_job+rank)
+tasks = distribute_tasks(candidate_motion_files,rank,size)
 
 for i in tasks:
     path = candidate_motion_files[i]
