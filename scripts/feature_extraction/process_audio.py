@@ -15,7 +15,7 @@ if not os.path.isdir(DATA_DIR):
 if not os.path.isdir(EXTRACT_DIR):
     os.mkdir(EXTRACT_DIR)
 sys.path.append(ROOT_DIR)
-from audio_feature_utils import extract_features_hybrid, extract_features_mel, extract_features_multi_mel
+from audio_feature_utils import extract_features_hybrid, extract_features_mel, extract_features_multi_mel, extract_features_envelope
 from utils import distribute_tasks
 
 parser = argparse.ArgumentParser(description="Preprocess audio data")

@@ -41,26 +41,26 @@ candidate_files = sorted(data_path.glob('**/*'+feature_name+'.npy'), key=lambda 
 tasks = range(len(candidate_files))
 
 from sklearn import decomposition, preprocessing
-features = None
+import pickle
+transforms = transforms.split(",")
+transforms_dict = {}
+for transform in transforms:
+    if transform == "scaler":
+        scaler = preprocessing.StandardScaler()
+        transforms_dict["scaler"] = scaler
+    elif transform == "pca_transform":
+        features = np.load(candidate_files[0].__str__())
+        feature_size = features.shape[1]
+        pca = decomposition.PCA(n_components=feature_size)
+        transforms_dict["pca_transform"] = pca
+    else:
+        raise NotImplementedError("Transform type "+transform+" not implemented")
 for i in tasks:
     path = candidate_files[i]
     feature_file = path.__str__()
-    if i == 0:
-        features = np.load(feature_file)
-    else:
-        feature = np.load(feature_file)
-        features = np.concatenate([features,feature],0)
+    features = np.load(feature_file)
+    for transform in transforms:
+        transforms_dict[transform].partial_fit(features)
 
-import pickle
-transforms = transforms.split(",")
 for transform in transforms:
-    if transform == "scaler":
-        scaler = preprocessing.StandardScaler().fit(features)
-        pickle.dump(scaler, open(data_path.joinpath(feature_name+'_scaler.pkl'), 'wb'))
-    elif transform == "pca_transform":
-        feature_size = features.shape[1]
-        pca = decomposition.PCA(n_components=feature_size)
-        pca_transform = pca.fit(features)
-        pickle.dump(pca_transform, open(data_path.joinpath(feature_name+'_pca_transform.pkl'), 'wb'))
-    else:
-        raise NotImplementedError("Transform type "+transform+" not implemented")
+    pickle.dump(transforms_dict[transform], open(data_path.joinpath(feature_name+'_'+transform+'.pkl'), 'wb'))

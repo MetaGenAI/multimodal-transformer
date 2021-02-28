@@ -40,7 +40,7 @@ def extract_features_mel(y, sr, hop,mel_dim=100):
     return features
 
 def extract_features_envelope(y, sr, hop,mel_dim=100):
-    envelope = librosa.onset.onset_strength(y=y_wav,hop_length=hop, n_mels=mel_dim)
+    envelope = librosa.onset.onset_strength(y=y,hop_length=hop, n_mels=mel_dim)
     return envelope
 
 def extract_features_chroma(y,sr, state_times):
