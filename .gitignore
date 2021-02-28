@@ -21,3 +21,6 @@ scripts/training/aistpp_212_mfcc/*
 scripts/training/aistpp_norm_backup/*
 scripts/training/aistpp_norm/*
 *.npy
+data/scaled_features/*
+data/scaled_features.tar.gz
+data/motion_features.tar.gz
