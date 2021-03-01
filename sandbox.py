@@ -104,19 +104,23 @@ mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1,
 
 import numpy as np
 import matplotlib.pyplot as plt
-mask = np.load("9018bc11-db47-4efb-be12-9ecddecc0acd.np.npy")
+mask = np.load("4db8086b-ae2c-4d60-b6bb-720214f36ef0.np.npy")
 mask[0][120:140]
 mask[0][:140]
 import torch
 maskt = torch.from_numpy(mask)
 
 ps = torch.nn.functional.softmax(maskt,dim=-1)
+sm = lambda x: torch.nn.functional.softmax(torch.from_numpy(x),dim=-1)
 ps[0]
 mask[1].max()
 mask[1].max()
 mask.shape
-mask[2]
-plt.matshow(mask[2])
+mask[8]
+mask[6].min()
+plt.matshow(mask[8][120:140])
+plt.matshow(sm(mask[9][120:140]))
+mask[8][120:121]
 plt.matshow(mask[9])
 plt.matshow(mask[5])
 plt.matshow(mask[9][0:1])

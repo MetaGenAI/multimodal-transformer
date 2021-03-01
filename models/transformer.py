@@ -51,10 +51,9 @@ class TransformerCausalModel(nn.Module):
         self.decoder.weight.data.uniform_(-initrange, initrange)
 
     def forward(self, src, src_mask):
-        # src = self.encoder(src) * math.sqrt(self.dinp)
-        src *= math.sqrt(self.dinp)
         src = self.pos_encoder(src)
         src = self.encoder1(src)
+        src /= math.sqrt(self.dhid)
         # print(src)
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
