@@ -54,7 +54,7 @@ class TransformerCausalModel(nn.Module):
         # src = self.encoder(src) * math.sqrt(self.dinp)
         src *= math.sqrt(self.dinp)
         src = self.pos_encoder(src)
-        # src = self.encoder1(src)
+        src = self.encoder1(src)
         # print(src)
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
