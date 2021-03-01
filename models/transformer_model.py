@@ -94,13 +94,13 @@ class TransformerModel(BaseModel):
         self.module_names = []
         for i, mod in enumerate(input_mods):
             #net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, opt.nlayers, opt.dropout)
-            net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, 2, opt.dropout).to(self.device)
+            net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, 2, opt.dropout, self.device).to(self.device)
             name = "_input_"+mod
             setattr(self,"net"+name, net)
             self.input_mod_nets.append(net)
             self.module_names.append(name)
         for i, mod in enumerate(output_mods):
-            net = TransformerCausalModel(douts[i], opt.dhid, opt.nhead, opt.dhid, opt.nlayers, opt.dropout).to(self.device)
+            net = TransformerCausalModel(douts[i], opt.dhid, opt.nhead, opt.dhid, opt.nlayers, opt.dropout, self.device).to(self.device)
             name = "_output_"+mod
             setattr(self,"net"+name, net)
             self.output_mod_nets.append(net)

@@ -60,6 +60,8 @@ class MultimodalDataset(BaseDataset):
         min_length = max(max(np.array(input_lengths) + np.array(input_time_offsets)), max(np.array(output_time_offsets) + np.array(output_lengths)) ) - min(0,min(output_time_offsets))
         print(min_length)
 
+        fix_lengths = False
+
         #Get the list of files containing features (in numpy format for now), and populate the dictionaries of input and output features (separated by modality)
         for base_filename in temp_base_filenames:
             file_too_short = False
@@ -71,10 +73,11 @@ class MultimodalDataset(BaseDataset):
                     length = features.shape[0]
                     #print(features.shape)
                     #print(length)
-                    if i == 0:
-                        length_0 = length
-                    else:
-                        assert length == length_0
+                    if not fix_lengths:
+                        if i == 0:
+                            length_0 = length
+                        else:
+                            assert length == length_0
                     if length < min_length:
                         # print("Smol sequence "+base_filename+"."+mod+"; ignoring..")
                         file_too_short = True
@@ -89,10 +92,11 @@ class MultimodalDataset(BaseDataset):
                 try:
                     features = np.load(feature_file)
                     length = features.shape[0]
-                    if i == 0:
-                        length_0 = length
-                    else:
-                        assert length == length_0
+                    if not fix_lengths:
+                        if i == 0:
+                            length_0 = length
+                        else:
+                            assert length == length_0
                     if length < min_length:
                         # print("Smol sequence "+base_filename+"."+mod+"; ignoring..")
                         file_too_short = True
@@ -106,38 +110,40 @@ class MultimodalDataset(BaseDataset):
                 feature_file = data_path.joinpath(base_filename+"."+mod+".npy")
                 self.input_features[mod][base_filename] = feature_file
 
-            #shortest_length = 99999999999
-            #for mod in input_mods:
-            #    length = np.load(self.input_features[mod][base_filename]).shape[0]
-            #    if length < shortest_length:
-            #        shortest_length = length
-            #for mod in input_mods:
-            #    np.save(self.input_features[mod][base_filename],np.load(self.input_features[mod][base_filename])[:shortest_length])
-            #for i, mod in enumerate(input_mods):
-            #    length = np.load(self.input_features[mod][base_filename]).shape[0]
-            #    if i == 0:
-            #        length_0 = length
-            #    else:
-            #        assert length == length_0
+            if fix_lengths:
+                shortest_length = 99999999999
+                for mod in input_mods:
+                    length = np.load(self.input_features[mod][base_filename]).shape[0]
+                    if length < shortest_length:
+                        shortest_length = length
+                for mod in input_mods:
+                    np.save(self.input_features[mod][base_filename],np.load(self.input_features[mod][base_filename])[:shortest_length])
+                for i, mod in enumerate(input_mods):
+                    length = np.load(self.input_features[mod][base_filename]).shape[0]
+                    if i == 0:
+                        length_0 = length
+                    else:
+                        assert length == length_0
 
             for mod in output_mods:
                 feature_file = data_path.joinpath(base_filename+"."+mod+".npy")
                 self.output_features[mod][base_filename] = feature_file
 
-            #shortest_length = 99999999999
-            #for mod in output_mods:
-            #    length = np.load(self.output_features[mod][base_filename]).shape[0]
-            #    if length < shortest_length:
-            #        shortest_length = length
-            #for mod in output_mods:
-            #    if mod not in input_mods:
-            #        np.save(self.output_features[mod][base_filename],np.load(self.output_features[mod][base_filename])[:shortest_length])
-            #for i, mod in enumerate(output_mods):
-            #    length = np.load(self.output_features[mod][base_filename]).shape[0]
-            #    if i == 0:
-            #        length_0 = length
-            #    else:
-            #        assert length == length_0
+            if fix_lengths:
+                shortest_length = 99999999999
+                for mod in output_mods:
+                    length = np.load(self.output_features[mod][base_filename]).shape[0]
+                    if length < shortest_length:
+                        shortest_length = length
+                for mod in output_mods:
+                    if mod not in input_mods:
+                        np.save(self.output_features[mod][base_filename],np.load(self.output_features[mod][base_filename])[:shortest_length])
+                for i, mod in enumerate(output_mods):
+                    length = np.load(self.output_features[mod][base_filename]).shape[0]
+                    if i == 0:
+                        length_0 = length
+                    else:
+                        assert length == length_0
 
             self.base_filenames.append(base_filename)
 

@@ -7,15 +7,14 @@ py=python
 dataset=multimodal
 model=transformer
 #exp=aistpp_big
-exp=aistpp_norm
+exp=aistpp_fixed
 
-$py scripts/training/train.py --data_dir=./data --dataset_name=$dataset --model=$model --batch_size=20 --num_windows=1 --nepoch=800 --nepoch_decay=500 \
+$py scripts/training/train.py --data_dir=./data/scaled_features --dataset_name=$dataset --model=$model --batch_size=20 --num_windows=2 --nepoch=500 --nepoch_decay=500 \
     --print_freq=10 --experiment_name=$exp --save_by_iter --save_latest_freq=5000 --checkpoints_dir scripts/training\
-    --learning_rate=0.00001 \
-    --dins="219,102" \
+    --dins="219,103" \
     --douts="219" \
-    --input_modalities="pkl_joint_angles_mats,mp3_mel_ddcpca" \
-    --output_modalities="pkl_joint_angles_mats" \
+    --input_modalities="joint_angles_scaled,mel_ddcpca_scaled" \
+    --output_modalities="joint_angles_scaled" \
     --input_lengths="140,240" \
     --output_lengths="20" \
     --output_time_offset="121" \
@@ -29,4 +28,4 @@ $py scripts/training/train.py --data_dir=./data --dataset_name=$dataset --model=
     --dropout=0 \
     --continue_train \
     --load_iter=1415000 \
-    #--learning_rate=0.000005 \
+    --learning_rate=0.00005 \

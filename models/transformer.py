@@ -5,25 +5,30 @@ import torch.nn.functional as F
 
 class PositionalEncoding(nn.Module):
 
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    def __init__(self, d_model, dropout=0.1, max_len=5000, device=None):
         super(PositionalEncoding, self).__init__()
+        self.device = device
         self.dropout = nn.Dropout(p=dropout)
         self.lpe = nn.Embedding(max_len+1, d_model)
+        self.indices = torch.arange(max_len).unsqueeze(1) + 1
+        if device is not None:
+            self.indices = self.indices.to(self.device)
 
     def forward(self, x, indices = None):
         if indices is None:
-            indices = torch.arange(x.size(0)).unsqueeze(1) + 1
+            indices = self.indices[:x.size(0),:]
             indices = self.dropout(indices)
         x = x + self.lpe(indices)
         return self.dropout(x)
 
 class TransformerCausalModel(nn.Module):
 
-    def __init__(self, dout, dinp, nhead, dhid, nlayers, dropout=0.5):
+    def __init__(self, dout, dinp, nhead, dhid, nlayers, dropout=0.5,device=None):
         super(TransformerCausalModel, self).__init__()
+        self.device = device
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
-        self.pos_encoder = PositionalEncoding(dinp, dropout)
+        self.pos_encoder = PositionalEncoding(dinp, dropout, device=self.device)
         self.encoder1 = nn.Linear(dinp, dhid)
         encoder_layers = TransformerEncoderLayer(dhid, nhead, dhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)

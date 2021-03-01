@@ -25,3 +25,4 @@ data/scaled_features/*
 data/scaled_features.tar.gz
 data/motion_features.tar.gz
 test_data/*
+scripts/training/aistpp_fixed/*
