@@ -7,7 +7,7 @@ py=python
 dataset=multimodal
 model=transformer
 #exp=aistpp_big
-exp=aistpp_fixed
+exp=aistpp_fixed2
 
 $py scripts/training/train.py --data_dir=./data/scaled_features --dataset_name=$dataset --model=$model --batch_size=20 --num_windows=2 --nepoch=500 --nepoch_decay=500 \
     --print_freq=10 --experiment_name=$exp --save_by_iter --save_latest_freq=5000 --checkpoints_dir scripts/training\
@@ -26,6 +26,6 @@ $py scripts/training/train.py --data_dir=./data/scaled_features --dataset_name=$
     --gpu_ids=0 \
     --workers=4 \
     --dropout=0 \
-    --continue_train \
-    --load_iter=1415000 \
-    --learning_rate=0.00005 \
+    #--continue_train \
+    #--load_iter=1415000 \
+    #--learning_rate=0.00005 \
