@@ -30,7 +30,7 @@ class TransformerCausalModel(nn.Module):
         self.model_type = 'Transformer'
         self.pos_encoder = PositionalEncoding(dinp, dropout, device=self.device)
         self.encoder1 = nn.Linear(dinp, dhid)
-        encoder_layers = TransformerEncoderLayer(dhid, nhead, dhid, dropout)
+        encoder_layers = TransformerEncoderLayer(dhid, nhead, 2048, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         # self.encoder = nn.Embedding(ntoken, dinp)
         self.dinp = dinp
