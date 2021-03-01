@@ -34,6 +34,7 @@ class TransformerCausalModel(nn.Module):
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         # self.encoder = nn.Embedding(ntoken, dinp)
         self.dinp = dinp
+        self.dhid = dhid
         self.decoder = nn.Linear(dhid, dout)
 
         self.init_weights()

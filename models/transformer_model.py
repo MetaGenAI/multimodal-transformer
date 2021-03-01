@@ -208,7 +208,7 @@ class TransformerModel(BaseModel):
             j+=self.input_lengths[i]
 
         latent = torch.cat(latents)
-        print(latent)
+        #print(latent)
         self.loss_mse = 0
         self.outputs = []
         for i, mod in enumerate(self.output_mods):
