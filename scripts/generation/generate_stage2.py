@@ -21,8 +21,6 @@ import models.constants as constants
 from math import ceil
 from scipy import signal
 
-from scripts.generation.level_generation_utils import extract_features, make_level_from_notes, get_notes_from_stepmania_file
-
 parser = argparse.ArgumentParser(description='Generate Beat Saber level from song')
 parser.add_argument('--song_path', type=str)
 parser.add_argument('--json_file', type=str)
@@ -76,6 +74,7 @@ opt = Struct(**opt)
 
 model = create_model(opt)
 model.setup()
+
 checkpoint = "iter_"+checkpoint
 model.load_networks(checkpoint)
 
@@ -83,13 +82,14 @@ model.load_networks(checkpoint)
 #%%
 
 # seq_id="gLH_sBM_cAll_d16_mLH1_ch04"
-#seq_id="gWA_sBM_cAll_d26_mWA1_ch10"
-seq_id="mambo"
+# seq_id="gWA_sBM_cAll_d26_mWA1_ch10"
+seq_id="gWA_sFM_cAll_d27_mWA2_ch17"
+# seq_id="mambo"
 
-# sf = np.load("data/features/"+seq_id+".mp3_mel_ddcpca.npy")
-sf = np.load("test_data/"+seq_id+".mp3_mel_ddcpca.npy")
-# mf = np.load("data/features/"+seq_id+".pkl_joint_angles_mats.npy")
-mf = np.load("test_data/"+seq_id+".pkl_joint_angles_mats.npy")
+# sf = np.load("data/features/"+seq_id+".mel_ddcpca_scaled.npy")
+sf = np.load("test_data/"+seq_id+".mel_ddcpca_scaled.npy")
+# mf = np.load("data/features/"+seq_id+".joint_angles_scaled.npy")
+mf = np.load("test_data/"+seq_id+".joint_angles_scaled.npy")
 # mf_mean=np.mean(mf,0,keepdims=True)
 # mf_std = np.std(mf,0,keepdims=True)+1e-5
 # sf = (sf-np.mean(sf,0,keepdims=True))/(np.std(sf,0,keepdims=True)+1e-5)
@@ -105,13 +105,13 @@ mf = np.load("test_data/"+seq_id+".pkl_joint_angles_mats.npy")
 # features = features.transpose(1,0)
 # print(features.shape)
 features = {}
-features["in_pkl_joint_angles_mats"] = np.expand_dims(np.expand_dims(mf.transpose(1,0),0),0)
-features["in_mp3_mel_ddcpca"] = np.expand_dims(np.expand_dims(sf.transpose(1,0),0),0)
+features["in_joint_angles_scaled"] = np.expand_dims(np.expand_dims(mf.transpose(1,0),0),0)
+features["in_mel_ddcpca_scaled"] = np.expand_dims(np.expand_dims(sf.transpose(1,0),0),0)
 
-predicted_modes = model.generate(features)[0]
+predicted_modes = model.generate(features)[0].cpu().numpy()
 
 # predicted_modes = (predicted_modes[0].cpu().numpy()*mf_std + mf_mean)
-transform = pickle.load(open("data/features"+'/'+'pkl_joint_angles_mats'+'_'+'scaler'+'.pkl', "rb"))
+transform = pickle.load(open("test_data"+'/'+'pkl_joint_angles_mats'+'_'+'scaler'+'.pkl', "rb"))
 predicted_modes = transform.inverse_transform(predicted_modes)
 
 print(predicted_modes)

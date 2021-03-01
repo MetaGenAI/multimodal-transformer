@@ -102,19 +102,23 @@ mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1,
 #plotting masks hmm
 #mega hacky lel
 
-mask = np.load("d2d79782-ad83-4617-9211-5f46baf8a3b8.np.npy")
+import numpy as np
+import matplotlib.pyplot as plt
+mask = np.load("9018bc11-db47-4efb-be12-9ecddecc0acd.np.npy")
 mask[0][120:140]
 mask[0][:140]
 import torch
-
 maskt = torch.from_numpy(mask)
 
 ps = torch.nn.functional.softmax(maskt,dim=-1)
 ps[0]
-
-plt.matshow(mask[4])
-plt.matshow(mask[3])
+mask[1].max()
+mask[1].max()
+mask.shape
+mask[2]
+plt.matshow(mask[2])
 plt.matshow(mask[9])
+plt.matshow(mask[5])
 plt.matshow(mask[9][0:1])
 
 
@@ -129,3 +133,19 @@ envelope = librosa.onset.onset_strength(y=y_wav,hop_length=480)
 (y_wav.shape[0]/48000)/0.01
 
 envelope.shape
+
+
+###################
+##
+
+seq_id="gWA_sFM_cAll_d27_mWA2_ch17"
+# seq_id="mambo"
+
+# sf = np.load("data/features/"+seq_id+".mel_ddcpca_scaled.npy")
+sf = np.load("test_data/"+seq_id+".mel_ddcpca_scaled.npy")
+# mf = np.load("data/features/"+seq_id+".joint_angles_scaled.npy")
+mf = np.load("test_data/"+seq_id+".joint_angles_scaled.npy")
+
+sf.shape
+sf
+plt.matshow(sf)

@@ -131,7 +131,8 @@ class TransformerModel(BaseModel):
         input_time_offsets = self.input_time_offsets
         self.src_masks = []
         for i, mod in enumerate(input_mods):
-            self.src_masks.append(self.input_mod_nets[i].generate_square_subsequent_mask(input_lengths[i], input_lengths[i]-predicted_inputs[i]).to(self.device))
+            mask = self.input_mod_nets[i].generate_square_subsequent_mask(input_lengths[i], input_lengths[i]-predicted_inputs[i]).to(self.device)
+            self.src_masks.append(mask)
 
         input_present_matrix = torch.zeros(len(input_mods),max(np.array(input_lengths)+np.array(input_time_offsets)))
         for i, mod in enumerate(input_mods):
@@ -150,6 +151,11 @@ class TransformerModel(BaseModel):
         self.output_mask = self.output_mod_nets[0].generate_square_subsequent_mask(sum(input_lengths), 0)
         self.output_mask = self.output_mask[input_indices.unsqueeze(0).T,input_indices.unsqueeze(0)]
         print(self.output_mask.shape)
+        j=0
+        for i, mod in enumerate(input_mods):
+            # self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = 0
+            self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = float('-inf')
+            j+=input_lengths[i]
         j=0
         for i, mod in enumerate(input_mods):
             # self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = 0
@@ -258,7 +264,7 @@ class TransformerModel(BaseModel):
                     for i,mod in enumerate(self.output_mods):
                         #output_seq[i] = torch.cat([output_seq[i], inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda()])
                         output_seq[i] = torch.cat([output_seq[i], self.outputs[i][:1].detach().clone()])
-                        #print(self.outputs[i][:1])
+                        # print(self.outputs[i][:1])
                         #print(inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda())
                     #output_seq = torch.cat([output_seq, x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,:219]])
                 if t < sequence_length-1:
@@ -267,8 +273,8 @@ class TransformerModel(BaseModel):
                             j = self.output_mods.index(mod)
                             #input_tmp[i] = torch.cat([input_tmp[i][1:],self.outputs[j][-1:].detach().clone()],0)
                             input_tmp[i] = torch.cat([input_tmp[i][1:-self.predicted_inputs[i]+1],self.outputs[j].detach().clone()],0)
-                            # print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+1]-self.outputs[j][:1].detach().clone())**2))
-                            #input_tmp[i] = torch.cat([input_tmp[i][1:],inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]],0)
+                            # input_tmp[i] = torch.cat([input_tmp[i][1:],inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]],0)
+                            print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+1]-self.outputs[j][:1].detach().clone())**2))
                             #print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+self.output_lengths[j]]-self.outputs[j].detach().clone())**2))
                             # input_seq[:,:,i:i+dmod] = torch.cat([input_seq[1:,:,i:i+dmod],x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,i:i+dmod]],0)
                             #print(input_tmp[i][t+self.input_time_offsets[i]+self.input_lengths[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]+1+1])
