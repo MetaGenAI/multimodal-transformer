@@ -2,8 +2,10 @@
 
 # song_path=$1
 
-exp2=aistpp_fixed3
-cpt2=90000
+exp2=aistpp_aaa3
+cpt2=15000
+# exp2=aistpp_norm
+# cpt2=1810000
 #cpt2=1200000
 #cpt2=1450000
 #exp2=test_block_selection

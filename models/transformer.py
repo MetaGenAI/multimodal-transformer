@@ -2,6 +2,8 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import uuid
+import numpy as np
 
 class PositionalEncoding(nn.Module):
 
@@ -10,16 +12,43 @@ class PositionalEncoding(nn.Module):
         self.device = device
         self.dropout = nn.Dropout(p=dropout)
         self.lpe = nn.Embedding(max_len+1, d_model)
+        # self.weight = None
         self.indices = torch.arange(max_len).unsqueeze(1) + 1
         if device is not None:
             self.indices = self.indices.to(self.device)
 
+    def init_weights(self):
+        initrange = 0.1
+        self.lpe.weight.data.uniform_(-initrange, initrange)
+
     def forward(self, x, indices = None):
+        np.save(str(uuid.uuid4())+".np",self.lpe.weight.data.cpu().numpy())
         if indices is None:
             indices = self.indices[:x.size(0),:]
             indices = self.dropout(indices)
         x = x + self.lpe(indices)
         return self.dropout(x)
+
+
+# class PositionalEncoding(nn.Module):
+#
+#     def __init__(self, d_model, dropout=0.1, max_len=5000, device=None):
+#         super(PositionalEncoding, self).__init__()
+#         self.dropout = nn.Dropout(p=dropout)
+#
+#         pe = torch.zeros(max_len, d_model)
+#         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
+#         div_term1 = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+#         div_term2 = torch.exp(torch.arange(0, (d_model//2)*2, 2).float() * (-math.log(10000.0) / d_model))
+#         pe[:, 0::2] = torch.sin(position * div_term1)
+#         pe[:, 1::2] = torch.cos(position * div_term2)
+#         pe = pe.unsqueeze(0).transpose(0, 1)
+#         self.register_buffer('pe', pe)
+#
+#     def forward(self, x):
+#         # print(x.shape)
+#         x = x + self.pe[:x.size(0), :]
+#         return self.dropout(x)
 
 class TransformerCausalModel(nn.Module):
 
@@ -39,6 +68,7 @@ class TransformerCausalModel(nn.Module):
         self.decoder = nn.Linear(dhid, dout)
 
         self.init_weights()
+        self.pos_encoder.init_weights()
 
     def generate_square_subsequent_mask(self, sz, prefix_length = 1):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
@@ -55,8 +85,9 @@ class TransformerCausalModel(nn.Module):
     def forward(self, src, src_mask):
         # src *= math.sqrt(self.dinp)
         src = self.encoder1(src)
-        src = self.pos_encoder(src)
+        # src = self.pos_encoder(src)
         # src /= math.sqrt(self.dhid)
+        # print(src)
         # print(torch.mm(src[:,0,:],src[:,0,:].T))
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)

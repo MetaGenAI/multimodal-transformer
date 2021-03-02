@@ -62,7 +62,21 @@ audio_feats = np.load("data/dev_audio/gBR_sBM_c01_d06_mBR2_ch02.mp3_mel_100.npy"
 audio_feats = np.load("data/features/gHO_sBM_cAll_d19_mHO3_ch08.mp3_multi_mel_80.npy_ddc_hidden.npy")
 audio_feats = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.mp3_mel_ddcpca.npy")
 motion_feats = np.load("data/features/gWA_sFM_cAll_d26_mWA1_ch09.pkl_joint_angles_mats.npy")
+mf = np.load("test_data/gWA_sFM_cAll_d27_mWA2_ch17.joint_angles_scaled.npy")
+mf = np.load("test_data/gWA_sFM_cAll_d27_mWA2_ch17.pkl_joint_angles_mats.npy")
+sf = np.load("test_data/gWA_sFM_cAll_d27_mWA2_ch17.mp3_mel_ddcpca.npy")
+sf = np.load("test_data/gWA_sFM_cAll_d27_mWA2_ch17.mel_ddcpca_scaled.npy")
 
+mf_mean=np.mean(mf,0,keepdims=True)
+mf_std = np.std(mf,0,keepdims=True)+1e-5
+sf = (sf-np.mean(sf,0,keepdims=True))/(np.std(sf,0,keepdims=True)+1e-5)
+mf = (mf-mf_mean)/(mf_std)
+
+mf
+
+plt.matshow(mf)
+plt.matshow(sf)
+sf[0]
 
 
 Audio_feats.shape
@@ -104,7 +118,7 @@ mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1,
 
 import numpy as np
 import matplotlib.pyplot as plt
-mask = np.load("27de81ed-7122-4d60-9fd2-1bdc1727bec1.np.npy")
+mask = np.load("55162fb4-6be9-41a2-9876-0f06a9b87c79.np.npy")
 mask[0][120:140]
 mask[0][:140]
 import torch
@@ -116,14 +130,27 @@ ps[0]
 mask[1].max()
 mask[1].max()
 mask.shape
-mask[8]
-mask[6].min()
-plt.matshow(mask[2][120:140])
-plt.matshow(sm(mask[3][120:140]))
+mask[0].shape
+import scipy.linalg
+mask[0].shape
+scipy.linalg.norm(mask[0],axis=1)
+mask[6]
+plt.matshow(mask[5][120:140])
+plt.matshow(sm(mask[6][120:140]))
 mask[8][120:121]
 plt.matshow(mask[9])
-plt.matshow(mask[5])
+plt.matshow(sm(mask[8]))
+plt.matshow(sm(mask[2][:100]))
+plt.matshow(sm(mask[2][100:]))
+plt.matshow(np.log(sm(mask[9])))
+plt.matshow(sm(mask[1][150:170]))
+plt.matshow(mask)
+plt.matshow(mask[:500])
+plt.matshow(np.matmul(mask[:500],mask[:500].T))
+mask
+mask.std(axis=1)
 plt.matshow(mask[9][0:1])
+mask
 
 
 ###########################

@@ -130,9 +130,13 @@ class TransformerModel(BaseModel):
         output_time_offsets = self.output_time_offsets
         input_time_offsets = self.input_time_offsets
         self.src_masks = []
+        # self.pos_embs = nn.ParameterList()
+        pos_embs = []
         for i, mod in enumerate(input_mods):
             mask = self.input_mod_nets[i].generate_square_subsequent_mask(input_lengths[i], input_lengths[i]-predicted_inputs[i]).to(self.device)
-            self.src_masks.append(mask)
+            pos_emb = nn.Parameter(torch.randn(*mask.shape))
+            pos_embs.append(pos_emb)
+            self.src_masks.append(mask+pos_emb)
 
         input_present_matrix = torch.zeros(len(input_mods),max(np.array(input_lengths)+np.array(input_time_offsets)))
         for i, mod in enumerate(input_mods):
@@ -148,21 +152,28 @@ class TransformerModel(BaseModel):
         input_indices = input_indices - 1
         input_indices = input_indices.long()
 
-        self.output_mask = self.output_mod_nets[0].generate_square_subsequent_mask(sum(input_lengths), 0)
-        self.output_mask = self.output_mask[input_indices.unsqueeze(0).T,input_indices.unsqueeze(0)]
+        self.output_masks = []
+        for i, mod in enumerate(output_mods):
+            net = self.output_mod_nets[i]
+            mask = net.generate_square_subsequent_mask(sum(input_lengths), 0)
+            mask = mask[input_indices.unsqueeze(0).T,input_indices.unsqueeze(0)]
+            pos_emb = nn.Parameter(torch.randn(*mask.shape))
+            pos_embs.append(pos_emb)
+            self.output_masks.append(mask+pos_emb)
         print(self.output_mask.shape)
         j=0
         for i, mod in enumerate(input_mods):
             # self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = 0
-            self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = float('-inf')
+            self.output_masks[i][j:j+input_lengths[i]-predicted_inputs[i],:] = float('-inf')
             j+=input_lengths[i]
         j=0
         for i, mod in enumerate(input_mods):
             # self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = 0
-            self.output_mask[:,j:j+input_lengths[i]-predicted_inputs[i]] = 0
+            self.output_masks[i][:,j:j+input_lengths[i]-predicted_inputs[i]] = 0
             j+=input_lengths[i]
 
-        self.output_mask = self.output_mask.to(self.device)
+        self.pos_embs = nn.ParameterList(pos_embs)
+        self.output_masks = [mask.to(self.device) for mask in self.output_masks]
 
 
     def name(self):
@@ -208,14 +219,14 @@ class TransformerModel(BaseModel):
             j+=self.input_lengths[i]
 
         latent = torch.cat(latents)
-        #print(latent)
+        # print(latent)
         self.loss_mse = 0
         self.outputs = []
         for i, mod in enumerate(self.output_mods):
             inp_index = self.input_mods.index(mod)
             j = input_begin_indices[mod]
             output_begin_index = j+self.input_lengths[inp_index]-self.predicted_inputs[inp_index]
-            output = self.output_mod_nets[i].forward(latent,self.output_mask)[output_begin_index:output_begin_index+self.output_lengths[i]]
+            output = self.output_mod_nets[i].forward(latent,self.output_masks[i])[output_begin_index:output_begin_index+self.output_lengths[i]]
             self.outputs.append(output)
             if calc_loss:
                 self.loss_mse += self.criterion(output,self.targets[i])
@@ -245,12 +256,13 @@ class TransformerModel(BaseModel):
         for i,mod in enumerate(self.input_mods):
             input_tmp.append(inputs_[i].clone()[self.input_time_offsets[i]:self.input_time_offsets[i]+self.input_lengths[i]])
 
-        #self.eval()
+        self.eval()
         output_seq = []
         # sequence_length = inputs_[0].shape[0]
         sequence_length = inputs_[1].shape[0]
         with torch.no_grad():
-            for t in range(sequence_length-max(self.input_lengths)-1):
+            for t in range(512):
+            # for t in range(sequence_length-max(self.input_lengths)-1):
             # for t in range(sequence_length):
                 print(t)
                 self.inputs = [x.clone() for x in input_tmp]
