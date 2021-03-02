@@ -75,8 +75,8 @@ opt = Struct(**opt)
 model = create_model(opt)
 model.setup()
 
-checkpoint = "iter_"+checkpoint
-model.load_networks(checkpoint)
+# checkpoint = "iter_"+checkpoint
+# model.load_networks(checkpoint)
 
 ''' GET SONG FEATURES for stage two '''
 #%%
