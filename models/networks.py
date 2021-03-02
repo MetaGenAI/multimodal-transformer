@@ -45,7 +45,7 @@ def init_net(net, init_type='normal', init_gain=0.02, gpu_ids=tuple()):
         net.cuda(device=gpu_ids[0])
         # print("HO")
         net = torch.nn.DataParallel(net, gpu_ids)
-    init_weights(net, init_type, gain=init_gain)
+    #init_weights(net, init_type, gain=init_gain)
     return net
 
 
