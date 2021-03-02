@@ -58,7 +58,7 @@ class TransformerCausalModel(nn.Module):
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
         self.model_type = 'Transformer'
         self.encoder1 = nn.Linear(dinp, dhid)
-        self.pos_encoder = PositionalEncoding(dhid, dropout, device=self.device)
+        #self.pos_encoder = PositionalEncoding(dhid, dropout, device=self.device)
         #encoder_layers = TransformerEncoderLayer(dhid, nhead, 2048, dropout)
         encoder_layers = TransformerEncoderLayer(dhid, nhead, dhid, dropout)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
@@ -68,7 +68,7 @@ class TransformerCausalModel(nn.Module):
         self.decoder = nn.Linear(dhid, dout)
 
         self.init_weights()
-        self.pos_encoder.init_weights()
+        #self.pos_encoder.init_weights()
 
     def generate_square_subsequent_mask(self, sz, prefix_length = 1):
         mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)

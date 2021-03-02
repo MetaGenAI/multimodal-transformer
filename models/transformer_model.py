@@ -130,12 +130,11 @@ class TransformerModel(BaseModel):
         output_time_offsets = self.output_time_offsets
         input_time_offsets = self.input_time_offsets
         self.src_masks = []
-        # self.pos_embs = nn.ParameterList()
-        pos_embs = []
+        src_pos_embs = []
         for i, mod in enumerate(input_mods):
             mask = self.input_mod_nets[i].generate_square_subsequent_mask(input_lengths[i], input_lengths[i]-predicted_inputs[i]).to(self.device)
-            pos_emb = nn.Parameter(torch.randn(*mask.shape))
-            pos_embs.append(pos_emb)
+            pos_emb = nn.Parameter(torch.randn(*mask.shape).to(self.device))
+            src_pos_embs.append(pos_emb)
             self.src_masks.append(mask+pos_emb)
 
         input_present_matrix = torch.zeros(len(input_mods),max(np.array(input_lengths)+np.array(input_time_offsets)))
@@ -153,27 +152,29 @@ class TransformerModel(BaseModel):
         input_indices = input_indices.long()
 
         self.output_masks = []
+        out_pos_embs = []
         for i, mod in enumerate(output_mods):
             net = self.output_mod_nets[i]
             mask = net.generate_square_subsequent_mask(sum(input_lengths), 0)
             mask = mask[input_indices.unsqueeze(0).T,input_indices.unsqueeze(0)]
-            pos_emb = nn.Parameter(torch.randn(*mask.shape))
-            pos_embs.append(pos_emb)
-            self.output_masks.append(mask+pos_emb)
-        print(self.output_mask.shape)
-        j=0
-        for i, mod in enumerate(input_mods):
-            # self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = 0
-            self.output_masks[i][j:j+input_lengths[i]-predicted_inputs[i],:] = float('-inf')
-            j+=input_lengths[i]
-        j=0
-        for i, mod in enumerate(input_mods):
-            # self.output_mask[j:j+input_lengths[i]-predicted_inputs[i],:] = 0
-            self.output_masks[i][:,j:j+input_lengths[i]-predicted_inputs[i]] = 0
-            j+=input_lengths[i]
+            j=0
+            for i, mod in enumerate(input_mods):
+                mask[j:j+input_lengths[i]-predicted_inputs[i],:] = float('-inf')
+                j+=input_lengths[i]
+            j=0
+            for i, mod in enumerate(input_mods):
+                mask[:,j:j+input_lengths[i]-predicted_inputs[i]] = 0
+                j+=input_lengths[i]
+            self.output_masks.append(mask.to(self.device))
+        for i, mod in enumerate(output_mods):
+            mask = self.output_masks[i]
+            pos_emb = nn.Parameter(torch.randn(*mask.shape).to(self.device))
+            out_pos_embs.append(pos_emb)
+            self.output_masks[i] += pos_emb
 
-        self.pos_embs = nn.ParameterList(pos_embs)
-        self.output_masks = [mask.to(self.device) for mask in self.output_masks]
+        self.src_pos_embs_params = nn.ParameterList(src_pos_embs)
+        self.out_pos_embs_params = nn.ParameterList(out_pos_embs)
+        #self.pos_embs = self.pos_embs.to(self.device)
 
 
     def name(self):
