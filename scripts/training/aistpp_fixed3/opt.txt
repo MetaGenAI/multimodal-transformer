@@ -1,0 +1,69 @@
+----------------- Options ---------------
+                  augment: 0                             
+              augment_dir:                               
+               batch_size: 20                            	[default: 1]
+         beat_subdivision: 16                            
+                    beta1: 0.5                           
+          checkpoints_dir: scripts/training              	[default: ../../scripts/training]
+           continue_train: False                         
+                 data_dir: ./data/scaled_features        	[default: /Users/andreachatrian/Documents/Repositories/oxai/beatsaber/DataE]
+             dataset_name: multimodal                    	[default: song]
+                     dhid: 800                           	[default: 512]
+                     dins: 219,103                       	[default: None]
+             display_freq: 100                           
+            do_validation: False                         
+                    douts: 219                           	[default: None]
+                  dropout: 0.0                           	[default: 0.1]
+              epoch_count: 1                             
+                     eval: False                         
+          experiment_name: aistpp_fixed3                 	[default: experiment_name]
+           fork_processes: False                         
+                  gpu_ids: 0                             	[default: -1]
+                init_gain: 0.02                          
+                init_type: normal                        
+            input_lengths: 140,240                       	[default: None]
+         input_modalities: joint_angles_scaled,mel_ddcpca_scaled	[default: mp3_mel_100]
+       input_time_offsets: 0                             
+                 is_train: True                          	[default: None]
+            learning_rate: 0.0001                        
+   learning_rate_patience: 50                            
+                     load: False                         
+               load_epoch: latest                        
+                load_iter: 0                             
+              loss_weight: None                          
+                       lr: 0.0002                        
+           lr_decay_iters: 50                            
+                lr_policy: lambda                        
+        max_token_seq_len: 1024                          
+                    model: transformer                   	[default: wavenet]
+                   nepoch: 500                           	[default: 100]
+             nepoch_decay: 500                           	[default: 100]
+                    nhead: 10                            	[default: 8]
+                  nlayers: 12                            	[default: 6]
+                  no_html: False                         
+              num_filters: 15                            
+              num_windows: 2                             	[default: 16]
+          output_channels: 1                             
+            output_length: 1                             
+           output_lengths: 20                            	[default: None]
+        output_modalities: joint_angles_scaled           	[default: mp3_mel_100]
+      output_time_offsets: 121                           	[default: 1]
+              pad_batches: False                         
+                    phase: train                         
+         predicted_inputs: 20,0                          	[default: 0]
+               print_freq: 10                            	[default: 100]
+            sampling_rate: 44100                         
+             save_by_iter: True                          	[default: False]
+          save_epoch_freq: 50                            
+         save_latest_freq: 5000                          
+                step_size: 0.01                          
+                     task: scripts.training              
+                  tpu_ids: -1                            
+         update_html_freq: 100                           
+  using_bpm_time_division: False                         
+           val_batch_size: 1                             
+           val_epoch_freq: 0                             	[default: 10]
+                  verbose: False                         
+             weight_decay: 0.0005                        
+                  workers: 4                             
+----------------- End -------------------
