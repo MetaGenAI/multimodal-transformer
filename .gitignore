@@ -27,3 +27,4 @@ data/motion_features.tar.gz
 test_data/*
 scripts/training/aistpp_fixed/*
 scripts/training/aistpp_fixed2/*
+scripts/training/aistpp_fixed3/*
