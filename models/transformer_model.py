@@ -152,7 +152,7 @@ class TransformerModel(BaseModel):
         input_indices = input_indices.long()
 
         self.output_masks = []
-        out_pos_embs = []
+        #out_pos_embs = []
         for i, mod in enumerate(output_mods):
             net = self.output_mod_nets[i]
             mask = net.generate_square_subsequent_mask(sum(input_lengths), 0)
@@ -166,14 +166,14 @@ class TransformerModel(BaseModel):
                 mask[:,j:j+input_lengths[i]-predicted_inputs[i]] = 0
                 j+=input_lengths[i]
             self.output_masks.append(mask.to(self.device))
-        for i, mod in enumerate(output_mods):
-            mask = self.output_masks[i]
-            pos_emb = nn.Parameter(torch.randn(*mask.shape).to(self.device))
-            out_pos_embs.append(pos_emb)
-            self.output_masks[i] += pos_emb
+        #for i, mod in enumerate(output_mods):
+        #    mask = self.output_masks[i]
+        #    pos_emb = nn.Parameter(torch.randn(*mask.shape).to(self.device))
+        #    out_pos_embs.append(pos_emb)
+        #    self.output_masks[i] += pos_emb
 
         self.src_pos_embs_params = nn.ParameterList(src_pos_embs)
-        self.out_pos_embs_params = nn.ParameterList(out_pos_embs)
+        #self.out_pos_embs_params = nn.ParameterList(out_pos_embs)
         #self.pos_embs = self.pos_embs.to(self.device)
 
 
