@@ -7,6 +7,8 @@ from .base_model import BaseModel
 from .transformer import TransformerCausalModel
 from models import constants
 import time
+from .nero import Nero
+import torch_optimizer as optim
 # from transformer.Translator import Translator
 
 def cal_performance(pred, gold, smoothing=False):
@@ -112,12 +114,29 @@ class TransformerModel(BaseModel):
         self.criterion = nn.MSELoss()
 
         print(opt.learning_rate)
-        self.optimizers = [torch.optim.Adam([
-            {'params': sum([[param for name, param in net.named_parameters() if name[-4:] == 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
-             'lr': 1 * opt.learning_rate },  # bias parameters change quicker - no weight decay is applied
-            {'params': sum([[param for name, param in net.named_parameters() if name[-4:] != 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
-             'lr': opt.learning_rate, 'weight_decay': opt.weight_decay}  # filter parameters have weight decay
-        ])]
+        #self.optimizers = [torch.optim.Adam([
+        #    {'params': sum([[param for name, param in net.named_parameters() if name[-4:] == 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
+        #     'lr': 1 * opt.learning_rate },  # bias parameters change quicker - no weight decay is applied
+        #    {'params': sum([[param for name, param in net.named_parameters() if name[-4:] != 'bias'] for net in self.input_mod_nets+self.output_mod_nets],[]),
+        #     'lr': opt.learning_rate, 'weight_decay': opt.weight_decay}  # filter parameters have weight decay
+        #])]
+        #self.optimizers = [Nero(sum([list(net.parameters()) for net in self.input_mod_nets+self.output_mod_nets],[]), lr=0.001)]
+        params = sum([list(net.parameters()) for net in self.input_mod_nets+self.output_mod_nets],[])
+        #optimizer = optim.Lamb(params, lr=opt.learning_rate)
+        optimizer = torch.optim.Adam(params,lr=opt.learning_rate)
+        #optimizer = Nero(params,lr=0.01)
+        #optimizer = torch.optim.SGD(params,lr=opt.learning_rate, momentum=0.9)
+        #optimizer = optim.Ranger(
+        #            params,
+        #                lr=opt.learning_rate,
+        #                    alpha=0.5,
+        #                        k=6,
+        #                            N_sma_threshhold=5,
+        #                                betas=(.95, 0.999),
+        #                                    eps=1e-5,
+        #                                        weight_decay=0
+        #                                        )
+        self.optimizers = [optimizer]
         self.loss_mse = None
 
     def generate_full_masks(self):
