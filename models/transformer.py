@@ -69,7 +69,7 @@ class TransformerCausalModel(nn.Module):
         self.use_pos_emb = use_pos_emb
         if use_pos_emb:
             assert input_length > 0
-            self.pos_emb = nn.Parameter(torch.eye(input_length,input_length)/np.sqrt(dinp).to(self.device))
+            self.pos_emb = nn.Parameter((torch.eye(input_length,input_length)/np.sqrt(dinp)).to(self.device))
 
         self.init_weights()
         #self.pos_encoder.init_weights()
@@ -90,7 +90,7 @@ class TransformerCausalModel(nn.Module):
         src = self.encoder1(src)
         #src *= math.sqrt(self.dhid)
         # src = self.pos_encoder(src)
-        src /= math.sqrt(self.dhid)
+        # src /= math.sqrt(self.dhid)
         # print(src)
         # print(torch.mm(src[:,0,:],src[:,0,:].T))
         if self.use_pos_emb:
