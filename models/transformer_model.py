@@ -94,7 +94,7 @@ class TransformerModel(BaseModel):
         self.module_names = []
         for i, mod in enumerate(input_mods):
             #net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, opt.nlayers, opt.dropout)
-            net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, 2, opt.dropout, self.device).to(self.device)
+            net = TransformerCausalModel(opt.dhid, dins[i], opt.nhead, opt.dhid, 2, opt.dropout, self.device, use_pos_emb=True,input_length=input_lengths[i]).to(self.device)
             name = "_input_"+mod
             setattr(self,"net"+name, net)
             self.input_mod_nets.append(net)
@@ -131,21 +131,24 @@ class TransformerModel(BaseModel):
         output_time_offsets = self.output_time_offsets
         input_time_offsets = self.input_time_offsets
         self.src_masks = []
-        src_pos_embs = []
+        # src_pos_embs = []
         for i, mod in enumerate(input_mods):
+            # net = self.input_mod_nets[i]
             mask = torch.zeros(input_lengths[i],input_lengths[i]).to(self.device)
-            pos_emb = nn.Parameter(torch.randn(*mask.shape).to(self.device))
-            src_pos_embs.append(pos_emb)
-            self.src_masks.append(mask+pos_emb)
+            # pos_emb = nn.Parameter(torch.eye(*mask.shape).to(self.device))
+            # net.pos_emb = pos_emb
+            # src_pos_embs.append(pos_emb)
+            self.src_masks.append(mask)
 
         self.output_masks = []
         for i, mod in enumerate(output_mods):
             mask = torch.zeros(sum(input_lengths),sum(input_lengths)).to(self.device)
             self.output_masks.append(mask.to(self.device))
 
-        self.src_pos_embs_params = nn.ParameterList(src_pos_embs)
+        # self.src_pos_embs_params = nn.ParameterList(src_pos_embs)
 
     def generate_masks(self):
+        #HAS BUGS
         input_mods = self.input_mods
         output_mods = self.output_mods
         dins = self.dins
@@ -246,7 +249,12 @@ class TransformerModel(BaseModel):
             j+=self.input_lengths[i]
 
         latent = torch.cat(latents)
+        # for net in self.input_mod_nets:
+        #     print([x[0] for x in list(net.named_parameters())])
         # print(latent.std())
+        # print(latent)
+        # print(self.src_pos_embs_params[0])
+        # print(self.src_pos_embs_params[0])
         self.loss_mse = 0
         self.outputs = []
         for i, mod in enumerate(self.output_mods):
@@ -315,13 +323,15 @@ class TransformerModel(BaseModel):
                     #output_seq = torch.cat([output_seq, x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,:219]])
                 if t < sequence_length-1:
                     for i,mod in enumerate(self.input_mods):
-                        if self.predicted_inputs[i] > 0:
+                        # if self.predicted_inputs[i] > 0:
+                        if mod in self.output_mods: #TODO: need flag to mark if autoregressive
                             j = self.output_mods.index(mod)
                             #input_tmp[i] = torch.cat([input_tmp[i][1:],self.outputs[j][-1:].detach().clone()],0)
                             output = self.outputs[i]
                             # print(output.shape)
                             # output[:,0,:-3] = torch.clamp(output[:,0,:-3],-3,3)
-                            input_tmp[i] = torch.cat([input_tmp[i][1:-self.predicted_inputs[i]+1],output.detach().clone()],0)
+                            # input_tmp[i] = torch.cat([input_tmp[i][1:-self.predicted_inputs[i]+1],output.detach().clone()],0)
+                            input_tmp[i] = torch.cat([input_tmp[i][1:],output[:1].detach().clone()],0)
                             # input_tmp[i] = torch.cat([input_tmp[i][1:],inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]],0)
                             print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+1]-self.outputs[j][:1].detach().clone())**2))
                             #print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+self.output_lengths[j]]-self.outputs[j].detach().clone())**2))
@@ -349,6 +359,7 @@ class TransformerModel(BaseModel):
 
     def optimize_parameters(self):
         for net in self.input_mod_nets:
+            # print(net.named_parameters())
             self.set_requires_grad(net, requires_grad=True)
         for net in self.output_mod_nets:
             self.set_requires_grad(net, requires_grad=True)

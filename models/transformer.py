@@ -52,7 +52,7 @@ class PositionalEncoding(nn.Module):
 
 class TransformerCausalModel(nn.Module):
 
-    def __init__(self, dout, dinp, nhead, dhid, nlayers, dropout=0.5,device=None):
+    def __init__(self, dout, dinp, nhead, dhid, nlayers, dropout=0.5,device=None,use_pos_emb=False,input_length=0):
         super(TransformerCausalModel, self).__init__()
         self.device = device
         from torch.nn import TransformerEncoder, TransformerEncoderLayer
@@ -66,6 +66,10 @@ class TransformerCausalModel(nn.Module):
         self.dinp = dinp
         self.dhid = dhid
         self.decoder = nn.Linear(dhid, dout)
+        self.use_pos_emb = use_pos_emb
+        if use_pos_emb:
+            assert input_length > 0
+            self.pos_emb = nn.Parameter(torch.eye(input_length,input_length).to(self.device))
 
         self.init_weights()
         #self.pos_encoder.init_weights()
@@ -86,9 +90,11 @@ class TransformerCausalModel(nn.Module):
         # src *= math.sqrt(self.dinp)
         src = self.encoder1(src)
         # src = self.pos_encoder(src)
-        # src /= math.sqrt(self.dhid)
+        src /= math.sqrt(self.dhid)
         # print(src)
         # print(torch.mm(src[:,0,:],src[:,0,:].T))
+        if self.use_pos_emb:
+            src_mask += self.pos_emb
         output = self.transformer_encoder(src, src_mask)
         output = self.decoder(output)
         return output

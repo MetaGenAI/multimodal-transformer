@@ -72,6 +72,8 @@ mf_std = np.std(mf,0,keepdims=True)+1e-5
 sf = (sf-np.mean(sf,0,keepdims=True))/(np.std(sf,0,keepdims=True)+1e-5)
 mf = (mf-mf_mean)/(mf_std)
 
+# sf.mean(0)
+
 mf
 
 plt.matshow(mf)
@@ -118,7 +120,7 @@ mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1,
 
 import numpy as np
 import matplotlib.pyplot as plt
-mask = np.load("8d9d27d8-4f76-4365-bbe4-fee755492268.np.npy")
+mask = np.load("6857f17c-f7f3-4aae-8a5c-8016e8e1745c.np.npy")
 mask[0][120:140]
 mask[0][:140]
 import torch
@@ -134,12 +136,12 @@ mask[0].shape
 import scipy.linalg
 mask[0].shape
 scipy.linalg.norm(mask[0],axis=1)
-mask[6]
-plt.matshow(mask[5][120:140])
-plt.matshow(sm(mask[9][120:140]))
-mask[8][120:121]
-plt.matshow(mask[5])
-plt.matshow(sm(mask[0]))
+mask[5]
+plt.matshow(mask[0][:20])
+plt.matshow(sm(mask[9][:20]))
+mask[9]
+plt.matshow(mask[6])
+plt.matshow(sm(mask[2]))
 plt.matshow(sm(mask[2][:100]))
 plt.matshow(sm(mask[2][100:]))
 plt.matshow(np.log(sm(mask[9])))
