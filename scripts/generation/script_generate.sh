@@ -2,8 +2,8 @@
 
 # song_path=$1
 
-exp2=aistpp_aaa3
-cpt2=15000
+exp2=aistpp_blpe2
+cpt2=615000
 # exp2=aistpp_norm
 # cpt2=1810000
 #cpt2=1200000

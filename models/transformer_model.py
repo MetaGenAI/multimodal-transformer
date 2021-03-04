@@ -220,7 +220,7 @@ class TransformerModel(BaseModel):
             j+=self.input_lengths[i]
 
         latent = torch.cat(latents)
-        # print(latent)
+        # print(latent.std())
         self.loss_mse = 0
         self.outputs = []
         for i, mod in enumerate(self.output_mods):
@@ -262,7 +262,7 @@ class TransformerModel(BaseModel):
         # sequence_length = inputs_[0].shape[0]
         sequence_length = inputs_[1].shape[0]
         with torch.no_grad():
-            for t in range(512):
+            for t in range(min(512,sequence_length-max(self.input_lengths)-1)):
             # for t in range(sequence_length-max(self.input_lengths)-1):
             # for t in range(sequence_length):
                 print(t)
@@ -272,12 +272,17 @@ class TransformerModel(BaseModel):
                 self.forward(False)
                 if t == 0:
                     for i,mod in enumerate(self.output_mods):
-                        output_seq.append(self.outputs[i][:1].detach().clone())
-                        #output_seq.append(inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda())
+                        output = self.outputs[i]
+                        # output[:,0,:-3] = torch.clamp(output[:,0,:-3],-3,3)
+                        output_seq.append(output[:1].detach().clone())
+                        # output_seq.append(inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda())
                 else:
                     for i,mod in enumerate(self.output_mods):
-                        #output_seq[i] = torch.cat([output_seq[i], inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda()])
-                        output_seq[i] = torch.cat([output_seq[i], self.outputs[i][:1].detach().clone()])
+                        # output_seq[i] = torch.cat([output_seq[i], inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda()])
+                        output = self.outputs[i]
+                        output_seq[i] = torch.cat([output_seq[i], output[:1].detach().clone()])
+
+                        # output[:,0,:-3] = torch.clamp(output[:,0,:-3],-3,3)
                         # print(self.outputs[i][:1])
                         #print(inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]+0.15*torch.randn(1,219).cuda())
                     #output_seq = torch.cat([output_seq, x[opt.input_seq_len+t+1:opt.input_seq_len+t+2,:,:219]])
@@ -286,7 +291,10 @@ class TransformerModel(BaseModel):
                         if self.predicted_inputs[i] > 0:
                             j = self.output_mods.index(mod)
                             #input_tmp[i] = torch.cat([input_tmp[i][1:],self.outputs[j][-1:].detach().clone()],0)
-                            input_tmp[i] = torch.cat([input_tmp[i][1:-self.predicted_inputs[i]+1],self.outputs[j].detach().clone()],0)
+                            output = self.outputs[i]
+                            # print(output.shape)
+                            # output[:,0,:-3] = torch.clamp(output[:,0,:-3],-3,3)
+                            input_tmp[i] = torch.cat([input_tmp[i][1:-self.predicted_inputs[i]+1],output.detach().clone()],0)
                             # input_tmp[i] = torch.cat([input_tmp[i][1:],inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]:t+self.input_time_offsets[i]+self.input_lengths[i]+1]],0)
                             print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+1]-self.outputs[j][:1].detach().clone())**2))
                             #print(torch.mean((inputs_[i][t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1:t+self.input_time_offsets[i]+self.input_lengths[i]-self.predicted_inputs[i]+1+self.output_lengths[j]]-self.outputs[j].detach().clone())**2))

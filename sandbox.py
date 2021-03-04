@@ -118,7 +118,7 @@ mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1,
 
 import numpy as np
 import matplotlib.pyplot as plt
-mask = np.load("55162fb4-6be9-41a2-9876-0f06a9b87c79.np.npy")
+mask = np.load("8d9d27d8-4f76-4365-bbe4-fee755492268.np.npy")
 mask[0][120:140]
 mask[0][:140]
 import torch
@@ -136,10 +136,10 @@ mask[0].shape
 scipy.linalg.norm(mask[0],axis=1)
 mask[6]
 plt.matshow(mask[5][120:140])
-plt.matshow(sm(mask[6][120:140]))
+plt.matshow(sm(mask[9][120:140]))
 mask[8][120:121]
-plt.matshow(mask[9])
-plt.matshow(sm(mask[8]))
+plt.matshow(mask[5])
+plt.matshow(sm(mask[0]))
 plt.matshow(sm(mask[2][:100]))
 plt.matshow(sm(mask[2][100:]))
 plt.matshow(np.log(sm(mask[9])))

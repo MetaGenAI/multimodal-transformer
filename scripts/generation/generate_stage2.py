@@ -83,8 +83,8 @@ model.load_networks(checkpoint)
 
 # seq_id="gLH_sBM_cAll_d16_mLH1_ch04"
 # seq_id="gWA_sBM_cAll_d26_mWA1_ch10"
-seq_id="gWA_sFM_cAll_d27_mWA2_ch17"
-#seq_id="gLO_sBM_cAll_d14_mLO4_ch05"
+# seq_id="gWA_sFM_cAll_d27_mWA2_ch17"
+seq_id="gLO_sBM_cAll_d14_mLO4_ch05"
 # seq_id="mambo"
 
 # sf = np.load("data/features/"+seq_id+".mel_ddcpca_scaled.npy")
