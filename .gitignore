@@ -35,3 +35,6 @@ scripts/training/aistpp_fixed4/*
 scripts/training/aistpp_blpe/*
 scripts/training/aistpp_blpe2/*
 scripts/training/aistpp_simp/*
+scripts/training/aistpp_simp2/*
+scripts/training/aistpp_simp_backup/*
+scripts/training/aistpp_simp_nero/*
