@@ -106,7 +106,8 @@ class TransformerModel(BaseModel):
             self.output_mod_nets.append(net)
             self.module_names.append(name)
 
-        self.generate_masks()
+        #self.generate_masks()
+        self.generate_full_masks()
 
         self.criterion = nn.MSELoss()
 
@@ -118,6 +119,31 @@ class TransformerModel(BaseModel):
              'lr': opt.learning_rate, 'weight_decay': opt.weight_decay}  # filter parameters have weight decay
         ])]
         self.loss_mse = None
+
+    def generate_full_masks(self):
+        input_mods = self.input_mods
+        output_mods = self.output_mods
+        dins = self.dins
+        douts = self.douts
+        input_lengths = self.input_lengths
+        predicted_inputs = self.predicted_inputs
+        output_lengths = self.output_lengths
+        output_time_offsets = self.output_time_offsets
+        input_time_offsets = self.input_time_offsets
+        self.src_masks = []
+        src_pos_embs = []
+        for i, mod in enumerate(input_mods):
+            mask = torch.zeros(input_lengths[i],input_lengths[i]).to(self.device)
+            pos_emb = nn.Parameter(torch.randn(*mask.shape).to(self.device))
+            src_pos_embs.append(pos_emb)
+            self.src_masks.append(mask+pos_emb)
+
+        self.output_masks = []
+        for i, mod in enumerate(output_mods):
+            mask = torch.zeros(sum(input_lengths),sum(input_lengths)).to(self.device)
+            self.output_masks.append(mask.to(self.device))
+
+        self.src_pos_embs_params = nn.ParameterList(src_pos_embs)
 
     def generate_masks(self):
         input_mods = self.input_mods
@@ -227,7 +253,8 @@ class TransformerModel(BaseModel):
             inp_index = self.input_mods.index(mod)
             j = input_begin_indices[mod]
             output_begin_index = j+self.input_lengths[inp_index]-self.predicted_inputs[inp_index]
-            output = self.output_mod_nets[i].forward(latent,self.output_masks[i])[output_begin_index:output_begin_index+self.output_lengths[i]]
+            #output = self.output_mod_nets[i].forward(latent,self.output_masks[i])[output_begin_index:output_begin_index+self.output_lengths[i]]
+            output = self.output_mod_nets[i].forward(latent,self.output_masks[i])[:self.output_lengths[i]]
             self.outputs.append(output)
             if calc_loss:
                 self.loss_mse += self.criterion(output,self.targets[i])
