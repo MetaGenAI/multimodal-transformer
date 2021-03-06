@@ -199,8 +199,8 @@ class MultimodalDataset(BaseDataset):
 
         # normalization of individual features for the sequence
         # not doing this any more as we are normalizing over all examples now
-        # x = [(xx-np.mean(xx,-1,keepdims=True))/(np.std(xx,-1,keepdims=True)+1e-5) for xx in x]
-        # y = [(yy-np.mean(yy,-1,keepdims=True))/(np.std(yy,-1,keepdims=True)+1e-5) for yy in y]
+        #x = [(xx-np.mean(xx,-1,keepdims=True))/(np.std(xx,-1,keepdims=True)+1e-5) for xx in x]
+        #y = [(yy-np.mean(yy,-1,keepdims=True))/(np.std(yy,-1,keepdims=True)+1e-5) for yy in y]
 
         ## we pad the song features with zeros to imitate during training what happens during generation
         #x = [np.concatenate((np.zeros(( xx.shape[0],max(0,max(output_time_offsets)) )),xx),1) for xx in x]
@@ -213,7 +213,10 @@ class MultimodalDataset(BaseDataset):
         # sample indices at which we will get opt.num_windows windows of the sequence to feed as inputs
             # TODO: make this deterministic, and determined by `item`, so that one epoch really corresponds to going through all the data..
         sequence_length = x[0].shape[-1]
-        indices = np.random.choice(range(0,sequence_length-max(max(input_lengths)+max(input_time_offsets),max(output_time_offsets)+max(output_lengths))),size=self.opt.num_windows,replace=True)
+        #indices = np.random.choice(range(0,sequence_length-max(max(input_lengths)+max(input_time_offsets),max(output_time_offsets)+max(output_lengths))),size=self.opt.num_windows,replace=True)
+        #max_i = sequence_length-max(max(input_lengths)+max(input_time_offsets),max(output_time_offsets)+max(output_lengths))
+        #indices = np.random.choice(range(0,20),size=self.opt.num_windows,replace=True)
+        indices = np.random.choice([0,1,2,3,4],size=1)
 
         ## CONSTRUCT TENSOR OF INPUT FEATURES ##
         input_windows = [torch.tensor([xx[:,i+input_time_offsets[j]:i+input_time_offsets[j]+input_lengths[j]] for i in indices]).float() for j,xx in enumerate(x)]

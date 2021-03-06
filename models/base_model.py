@@ -10,8 +10,8 @@ if not os.path.isdir(DATA_DIR):
     os.mkdir(DATA_DIR)
 if not os.path.isdir(EXTRACT_DIR):
     os.mkdir(EXTRACT_DIR)
-print(ROOT_DIR)
-print(THIS_DIR)
+#print(ROOT_DIR)
+#print(THIS_DIR)
 sys.path.insert(0,ROOT_DIR)
 
 from scripts.misc.utils import utils

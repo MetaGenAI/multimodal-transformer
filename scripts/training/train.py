@@ -21,7 +21,7 @@ from scripts.training.options.train_options import TrainOptions
 if __name__ == '__main__':
     opt = TrainOptions().parse()
     model = create_model(opt)
-    print("HI")
+    #print("HI")
     model.setup()
     train_dataset = create_dataset(opt)
     train_dataset.setup()

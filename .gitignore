@@ -38,3 +38,6 @@ scripts/training/aistpp_simp/*
 scripts/training/aistpp_simp2/*
 scripts/training/aistpp_simp_backup/*
 scripts/training/aistpp_simp_nero/*
+scripts/training/aistpp_simp_fix/*
+scripts/training/aistpp_simp_fix2/*
+scripts/training/aistpp_simp_test/*

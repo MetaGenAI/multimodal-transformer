@@ -102,7 +102,7 @@ class TransformerModel(BaseModel):
             self.input_mod_nets.append(net)
             self.module_names.append(name)
         for i, mod in enumerate(output_mods):
-            net = TransformerCausalModel(douts[i], opt.dhid, opt.nhead, opt.dhid, opt.nlayers, opt.dropout, self.device).to(self.device)
+            net = TransformerCausalModel(douts[i], opt.dhid, opt.nhead, opt.dhid, opt.nlayers, opt.dropout, self.device, use_pos_emb=True,input_length=sum(input_lengths)).to(self.device)
             name = "_output_"+mod
             setattr(self,"net"+name, net)
             self.output_mod_nets.append(net)
@@ -124,7 +124,7 @@ class TransformerModel(BaseModel):
         params = sum([list(net.parameters()) for net in self.input_mod_nets+self.output_mod_nets],[])
         #optimizer = optim.Lamb(params, lr=opt.learning_rate)
         optimizer = torch.optim.Adam(params,lr=opt.learning_rate)
-        #optimizer = Nero(params,lr=0.01)
+        #optimizer = Nero(params,lr=0.001)
         #optimizer = torch.optim.SGD(params,lr=opt.learning_rate, momentum=0.9)
         #optimizer = optim.Ranger(
         #            params,
@@ -260,12 +260,12 @@ class TransformerModel(BaseModel):
 
     def forward(self, calc_loss=True):
         latents = []
-        input_begin_indices = {}
-        j=0
+        #input_begin_indices = {}
+        #j=0
         for i, mod in enumerate(self.input_mods):
             latents.append(self.input_mod_nets[i].forward(self.inputs[i],self.src_masks[i]))
-            input_begin_indices[mod] = j
-            j+=self.input_lengths[i]
+            #input_begin_indices[mod] = j
+            #j+=self.input_lengths[i]
 
         latent = torch.cat(latents)
         # for net in self.input_mod_nets:
@@ -277,9 +277,9 @@ class TransformerModel(BaseModel):
         self.loss_mse = 0
         self.outputs = []
         for i, mod in enumerate(self.output_mods):
-            inp_index = self.input_mods.index(mod)
-            j = input_begin_indices[mod]
-            output_begin_index = j+self.input_lengths[inp_index]-self.predicted_inputs[inp_index]
+            #inp_index = self.input_mods.index(mod)
+            #j = input_begin_indices[mod]
+            #output_begin_index = j+self.input_lengths[inp_index]-self.predicted_inputs[inp_index]
             #output = self.output_mod_nets[i].forward(latent,self.output_masks[i])[output_begin_index:output_begin_index+self.output_lengths[i]]
             output = self.output_mod_nets[i].forward(latent,self.output_masks[i])[:self.output_lengths[i]]
             self.outputs.append(output)
@@ -370,17 +370,17 @@ class TransformerModel(BaseModel):
     def backward(self):
         self.optimizers[0].zero_grad()
         self.loss_mse.backward()
-        for net in self.input_mod_nets:
-            torch.nn.utils.clip_grad_norm_(net.parameters(), 0.5)
-        for net in self.output_mod_nets:
-            torch.nn.utils.clip_grad_norm_(net.parameters(), 0.5)
+        #for net in self.input_mod_nets:
+        #    torch.nn.utils.clip_grad_norm_(net.parameters(), 0.5)
+        #for net in self.output_mod_nets:
+        #    torch.nn.utils.clip_grad_norm_(net.parameters(), 0.5)
         self.optimizers[0].step()
 
     def optimize_parameters(self):
-        for net in self.input_mod_nets:
-            # print(net.named_parameters())
-            self.set_requires_grad(net, requires_grad=True)
-        for net in self.output_mod_nets:
-            self.set_requires_grad(net, requires_grad=True)
+        #for net in self.input_mod_nets:
+        #    # print(net.named_parameters())
+        #    self.set_requires_grad(net, requires_grad=True)
+        #for net in self.output_mod_nets:
+        #    self.set_requires_grad(net, requires_grad=True)
         self.forward()
         self.backward()
